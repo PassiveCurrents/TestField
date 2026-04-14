@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>X/O CLASH</title>
-
 <style>
 body{
   margin:0;
@@ -15,9 +14,10 @@ body{
   background:radial-gradient(circle,#2a0040,#000);
   font-family:sans-serif;
   color:white;
+  overflow:hidden;
 }
 
-/* ===== TITLE (UNCHANGED) ===== */
+/* ===== TITLE ===== */
 #title{
   font-size:77px;
   font-weight:900;
@@ -39,67 +39,80 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
-  gap:180px; /* ← FIXED spacing so LEFT never enters fog */
+  gap:220px;
 }
 
 /* SIDE STATUS */
 .side{
-  width:200px;
+  width:220px;
   text-align:center;
   font-size:48px;
   font-weight:900;
   letter-spacing:2px;
+  white-space:nowrap;
+  margin-left: -68px;
 }
 
-/* SILVER MIRROR EFFECT */
+/* METAL TEXT */
 .metal{
-  background:linear-gradient(
-    120deg,
-    #ffffff 0%,
-    #d0f0ff 20%,
-    #ffffff 40%,
-    #999 60%,
-    #ffffff 80%
-  );
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-
+  color:#fff;
   text-shadow:
-    0 0 10px #ffffff,
-    0 0 25px #00f0ff,
-    0 0 40px #ffffff;
+    0 0 10px #fff,
+    0 0 25px #fff,
+    0 0 50px #fff;
 }
 
-/* DRAW STYLE */
+/* DRAW TEXT WITH SUBTLE PULSE */
 .draw{
   color:#ff0033;
-  font-size:80px;
+  font-size:90px;
   text-shadow:
+    0 0 10px #ffffff,
+    0 0 25px #ffffff,
     0 0 20px #ff0033,
     0 0 40px #ff0033,
     0 0 80px #ff0033;
+  animation: drawPulse 3.2s ease-in-out infinite;
+}
+
+@keyframes drawPulse {
+  0%, 100% { 
+    opacity: 0.92; 
+    text-shadow:
+      0 0 10px #ffffff,
+      0 0 25px #ffffff,
+      0 0 20px #ff0033,
+      0 0 40px #ff0033,
+      0 0 80px #ff0033;
+  }
+  50% { 
+    opacity: 1; 
+    text-shadow:
+      0 0 15px #ffffff,
+      0 0 35px #ffffff,
+      0 0 30px #ff0033,
+      0 0 55px #ff0033,
+      0 0 100px #ff0033;
+  }
 }
 
 /* ===== BOARD ===== */
 #board{
   position:relative;
   display:grid;
-  grid-template-columns:repeat(3,85px);
+  grid-template-columns:repeat(3,86px);
   gap:12px;
-  padding:22px;
+  padding:20px;
   border-radius:50px;
-
   background:#20003a;
-
   border:24px solid #00f0ff;
-
   box-shadow:
     0 0 80px #00f0ff,
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
 
-/* STRONGER SIDE FOG */
+/* SIDE GLOW / FOG */
 #board::before{
   content:"";
   position:absolute;
@@ -109,31 +122,22 @@ body{
   right:-140px;
   border-radius:50px;
   pointer-events:none;
-
   background:radial-gradient(
     ellipse at center,
     rgba(0,240,255,0.35),
     transparent 70%
   );
-
   animation:sidePulse 2.2s ease-in-out infinite;
 }
-
 @keyframes sidePulse{
-  0%,100%{
-    opacity:0.5;
-    transform:scaleX(1);
-  }
-  50%{
-    opacity:1;
-    transform:scaleX(1.35);
-  }
+  0%,100%{ opacity:0.4; transform:scaleX(1); }
+  50%{ opacity:1; transform:scaleX(1.35); }
 }
 
 /* CELLS */
 .cell{
-  width:85px;
-  height:85px;
+  width:86px;
+  height:86px;
   border-radius:30px;
   background:#3a0060;
   display:flex;
@@ -147,11 +151,10 @@ body{
 
 /* MARKS */
 .mark{
-  font-size:60px;
+  font-size:64px;
   font-weight:900;
   animation:float 2s ease-in-out infinite;
 }
-
 .x{
   color:#00f0ff;
   text-shadow:
@@ -159,7 +162,6 @@ body{
     0 0 60px #00f0ff,
     0 0 120px #00f0ff;
 }
-
 .o{
   color:#ff00cc;
   text-shadow:
@@ -167,234 +169,197 @@ body{
     0 0 60px #ff00cc,
     0 0 120px #ff00cc;
 }
-
 @keyframes float{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-10px)}
 }
 
-/* WIN LINE */
-.win-line{
-  position:absolute;
-  height:14px;
-  border-radius:20px;
-  transform-origin:left center;
-}
-
-/* RESTART (UPGRADED LIKE PIC 2) */
+/* RESTART BUTTON */
 #restart{
   margin-top:40px;
-  padding:20px 72px;
-  font-size:22px;
+  padding:18px 80px;
+  font-size:24px;
   font-weight:900;
-  letter-spacing:2px;
-
+  letter-spacing:3px;
   border:none;
   border-radius:60px;
   cursor:pointer;
-
-  background:#baff00;
-
-  /* white coating */
+  background:linear-gradient(180deg, #d4ff4d, #a6ff00);
+  color:#111;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.5),
+    0 2px 4px rgba(0,0,0,0.4);
   box-shadow:
-    0 0 0 6px rgba(255,255,255,0.15),
     0 0 40px #baff00,
     0 0 80px #baff00,
-    inset 0 0 12px rgba(255,255,255,0.6),
-    inset 0 0 10px #000;
+    inset 0 4px 12px rgba(255,255,255,0.7),
+    inset 0 -6px 12px rgba(0,0,0,0.3);
+  position: relative;
+  overflow: hidden;
+}
 
-  color:#000;
-
-  text-shadow:
-    0 0 3px #000,
-    0 0 6px #000;
-
-  transition:.15s;
+/* Gentle white glowing coat */
+#restart::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 65px;
+  background: linear-gradient(white, rgba(255,255,255,0.65));
+  z-index: -1;
+  filter: blur(8px);
+  opacity: 0.85;
 }
 
 #restart:active{
-  transform:scale(0.85);
+  transform:scale(0.93);
 }
 </style>
 </head>
-
 <body>
-
 <div id="title">X/O CLASH</div>
-
 <div id="game">
   <div id="left" class="side"></div>
   <div id="board"></div>
   <div id="right" class="side"></div>
 </div>
-
 <button id="restart">RESTART</button>
 
 <script>
-let boardState=Array(9).fill(null);
-let current="X";
-let gameOver=false;
-let swap=false;
+let boardState = Array(9).fill(null);
+let current = "X";
+let gameOver = false;
+let swap = false;
 
-const board=document.getElementById("board");
-const left=document.getElementById("left");
-const right=document.getElementById("right");
+const board = document.getElementById("board");
+const left = document.getElementById("left");
+const right = document.getElementById("right");
+const restartBtn = document.getElementById("restart");
+
+let audioCtx; // Web Audio Context
+
+// Simple sound function
+function playSound(freq, duration = 0.1, type = 'sine') {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+  
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration);
+}
+
+// Sparkle / Win sound
+function playSparkle() {
+  playSound(880, 0.08, 'sine');
+  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
+  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+}
+
+// Placement sound (different tone for X and O)
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
+
+// Reset sound
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
+}
 
 /* CREATE GRID */
-for(let i=0;i<9;i++){
-  const c=document.createElement("div");
-  c.className="cell";
-  c.dataset.i=i;
+for(let i = 0; i < 9; i++){
+  const c = document.createElement("div");
+  c.className = "cell";
+  c.dataset.i = i;
   board.appendChild(c);
-}
-
-/* AUDIO */
-let ctx;
-function sound(freq,time){
-  if(!ctx) ctx=new AudioContext();
-  const o=ctx.createOscillator();
-  const g=ctx.createGain();
-  o.connect(g); g.connect(ctx.destination);
-  o.frequency.value=freq;
-  g.gain.setValueAtTime(0.2,ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+time);
-  o.start();
-  o.stop(ctx.currentTime+time);
-}
-
-/* SPARKS */
-function sparks(x,y,color){
-  for(let i=0;i<12;i++){
-    const s=document.createElement("div");
-    s.style.position="fixed";
-    s.style.left=x+"px";
-    s.style.top=y+"px";
-    s.style.width="6px";
-    s.style.height="6px";
-    s.style.background=color;
-    s.style.borderRadius="50%";
-
-    const dx=Math.random()*140-70;
-    const dy=Math.random()*140-70;
-
-    document.body.appendChild(s);
-
-    requestAnimationFrame(()=>{
-      s.style.transition="all .4s";
-      s.style.transform=`translate(${dx}px,${dy}px)`;
-      s.style.opacity="0";
-    });
-
-    setTimeout(()=>s.remove(),400);
-  }
-}
-
-/* WIN CHECK */
-const wins=[
-[0,1,2],[3,4,5],[6,7,8],
-[0,3,6],[1,4,7],[2,5,8],
-[0,4,8],[2,4,6]
-];
-
-function checkWin(){
-  return wins.find(([a,b,c])=>
-    boardState[a] &&
-    boardState[a]===boardState[b] &&
-    boardState[a]===boardState[c]
-  );
 }
 
 /* UI UPDATE */
 function updateUI(text){
-
-  left.classList.remove("draw","metal");
-  right.classList.remove("draw","metal");
-
-  if(text==="DRAW"){
-    left.textContent="DRAW";
-    right.textContent="DRAW";
+  left.className = "side";
+  right.className = "side";
+  if(text === "DRAW"){
+    left.textContent = "DRAW";
+    right.textContent = "DRAW";
     left.classList.add("draw");
     right.classList.add("draw");
     return;
   }
-
   if(!swap){
-    if(text.includes("X")){
-      left.textContent=text;
-      left.classList.add("metal");
-      right.textContent="";
-    }else{
-      right.textContent=text;
-      right.classList.add("metal");
-      left.textContent="";
-    }
-  }else{
-    if(text.includes("X")){
-      right.textContent=text;
-      right.classList.add("metal");
-      left.textContent="";
-    }else{
-      left.textContent=text;
-      left.classList.add("metal");
-      right.textContent="";
-    }
+    left.textContent = text.includes("X") ? text : "";
+    right.textContent = text.includes("O") ? text : "";
+  } else {
+    left.textContent = text.includes("O") ? text : "";
+    right.textContent = text.includes("X") ? text : "";
   }
+  if(left.textContent) left.classList.add("metal");
+  if(right.textContent) right.classList.add("metal");
 }
 
 /* CLICK */
-board.onclick=e=>{
-  const cell=e.target.closest(".cell");
-  if(!cell||gameOver)return;
+board.onclick = e => {
+  const cell = e.target.closest(".cell");
+  if(!cell || gameOver) return;
+  const i = cell.dataset.i;
+  if(boardState[i]) return;
 
-  const i=cell.dataset.i;
-  if(boardState[i])return;
-
-  boardState[i]=current;
-
-  const m=document.createElement("div");
-  m.className="mark "+current.toLowerCase();
-  m.textContent=current;
+  boardState[i] = current;
+  const m = document.createElement("div");
+  m.className = "mark " + current.toLowerCase();
+  m.textContent = current;
   cell.appendChild(m);
 
-  const rect=cell.getBoundingClientRect();
-  sparks(rect.left+rect.width/2,rect.top+rect.height/2,current==="X"?"#00f0ff":"#ff00cc");
+  // Sound + visual feedback
+  playPlaceSound(current === "X");
 
-  sound(600,0.1);
-
-  const win=checkWin();
-
+  const win = checkWin();
   if(win){
-    gameOver=true;
-    updateUI(current+" WINS");
+    gameOver = true;
+    playSparkle();
+    updateUI(current + " WINS");
     return;
   }
-
-  if(boardState.every(x=>x)){
-    gameOver=true;
+  if(boardState.every(x => x)){
+    gameOver = true;
     updateUI("DRAW");
     return;
   }
-
-  current=current==="X"?"O":"X";
-  updateUI(current+" TURN");
+  current = current === "X" ? "O" : "X";
+  updateUI(current + " TURN");
 };
 
+/* WIN CHECK */
+const wins = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+function checkWin(){
+  return wins.find(([a,b,c]) =>
+    boardState[a] && boardState[a]===boardState[b] && boardState[a]===boardState[c]
+  );
+}
+
 /* RESET */
-restart.onclick=()=>{
-  boardState=Array(9).fill(null);
-  current="X";
-  gameOver=false;
-  swap=!swap;
-
-  document.querySelectorAll(".cell").forEach(c=>c.innerHTML="");
-  document.querySelectorAll(".win-line").forEach(l=>l.remove());
-
+restartBtn.onclick = () => {
+  boardState = Array(9).fill(null);
+  current = "X";
+  gameOver = false;
+  swap = !swap;
+  document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
   updateUI("X TURN");
-  sound(300,0.2);
+  playResetSound();
 };
 
 updateUI("X TURN");
 </script>
-
 </body>
 </html>
