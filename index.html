@@ -42,7 +42,7 @@ body{
   gap:220px;
 }
 
-/* SIDE STATUS - SYMBOL ABOVE TEXT */
+/* SIDE STATUS - SINGLE SYMBOL CENTERED ABOVE TEXT */
 .side{
   width:220px;
   text-align:center;
@@ -54,19 +54,19 @@ body{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-/* PLAYER SYMBOL - SAME SILVER METALLIC GLOW AS THE TEXT */
+/* PLAYER SYMBOL - CENTERED ABOVE WORD */
 .side .symbol {
-  font-size: 78px;
+  font-size: 82px;
   font-weight: 900;
   line-height: 1;
   color: #ffffff;
   text-shadow:
     0 0 12px #ffffff,
-    0 0 25px #d0f0ff,
-    0 0 45px #ffffff;
+    0 0 28px #d0f0ff,
+    0 0 50px #ffffff;
 }
 
 /* METAL TEXT */
@@ -289,7 +289,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* UI UPDATE - SYMBOL ABOVE TEXT (silver metallic glow) */
+/* UI UPDATE - SINGLE SYMBOL CENTERED ABOVE TEXT */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
