@@ -107,8 +107,7 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-
-/* ✅ FIXED: overlay now matches board EXACTLY */
+/* WIN BEAM - CLEAN 1:1 ALIGNMENT */
 #winBeam{
   position:absolute;
   inset:0;
@@ -117,12 +116,10 @@ body{
   opacity:0;
   transition: opacity 0.4s ease-out;
 }
-
 #winBeam svg{
   width:100%;
   height:100%;
 }
-
 #winBeam line{
   stroke: currentColor;
   stroke-linecap: round;
@@ -131,7 +128,6 @@ body{
   filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
   animation: beamSettle 1.2s ease-out forwards;
 }
-
 @keyframes beamSettle{
   0%{
     stroke-width: 32;
@@ -142,7 +138,6 @@ body{
     opacity: 1;
   }
 }
-
 /* FOG */
 #board::before{
   content:"";
@@ -241,9 +236,7 @@ body{
 </style>
 </head>
 <body>
-
 <div id="title">X/O CLASH</div>
-
 <div id="game">
   <div id="left" class="side"></div>
   <div id="board">
@@ -251,18 +244,14 @@ body{
   </div>
   <div id="right" class="side"></div>
 </div>
-
 <button id="restart">RESTART</button>
 
 <script>
-
 /* ===== ORIGINAL CODE UNTOUCHED ===== */
-
 let boardState = Array(9).fill(null);
 let current = "X";
 let gameOver = false;
 let swap = false;
-
 const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
@@ -300,39 +289,49 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* ✅ FIXED: TRUE BOARD-RELATIVE CENTERS */
+/* TRUE BOARD-RELATIVE CENTERS + SUBPIXEL + STROKE CENTER COMPENSATION */
 function getCellCenter(index) {
   const cell = document.querySelectorAll(".cell")[index];
   const rect = cell.getBoundingClientRect();
   const boardRect = board.getBoundingClientRect();
-
-  return {
-    x: (rect.left + rect.width/2) - boardRect.left,
-    y: (rect.top + rect.height/2) - boardRect.top
-  };
+  
+  let x = (rect.left + rect.width / 2) - boardRect.left;
+  let y = (rect.top + rect.height / 2) - boardRect.top - 5;   // half stroke visual center micro-adjust
+  
+  // Snap to device pixels to eliminate subpixel drift
+  const dpr = window.devicePixelRatio || 1;
+  x = Math.round(x * dpr) / dpr;
+  y = Math.round(y * dpr) / dpr;
+  
+  return { x, y };
 }
 
-/* ✅ FIXED: PERFECT BEAM */
+/* PERFECT WIN BEAM - 1:1 alignment, full length, dead center */
 function drawWinBeam(winCombo) {
-  const [a,,c] = winCombo;
-
+  if (!winCombo) return;
+  
+  const [a, , c] = winCombo;
   const start = getCellCenter(a);
   const end = getCellCenter(c);
 
   const color = current === "X" ? "#00f0ff" : "#ff00cc";
 
   winBeam.innerHTML = `
-    <svg viewBox="0 0 ${board.clientWidth} ${board.clientHeight}">
-      <line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="${color}" />
+    <svg viewBox="0 0 ${board.clientWidth} ${board.clientHeight}" width="100%" height="100%">
+      <line 
+        x1="${start.x}" 
+        y1="${start.y}" 
+        x2="${end.x}" 
+        y2="${end.y}" 
+        stroke="${color}" 
+      />
     </svg>
   `;
-
   winBeam.style.color = color;
   winBeam.style.opacity = "1";
 }
 
-/* REST OF CODE UNTOUCHED */
-
+/* UI UPDATE */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -354,6 +353,7 @@ function updateUI(text){
   target.classList.add("metal");
 }
 
+/* CLICK */
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
@@ -387,12 +387,12 @@ board.onclick = e => {
   updateUI(current + " TURN");
 };
 
+/* WIN CHECK */
 const wins = [
   [0,1,2],[3,4,5],[6,7,8],
   [0,3,6],[1,4,7],[2,5,8],
   [0,4,8],[2,4,6]
 ];
-
 function checkWin(){
   return wins.find(([a,b,c]) =>
     boardState[a] &&
@@ -401,16 +401,15 @@ function checkWin(){
   );
 }
 
+/* RESET */
 restartBtn.onclick = () => {
   boardState = Array(9).fill(null);
   current = "X";
   gameOver = false;
   swap = !swap;
-
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
   winBeam.innerHTML = "";
   winBeam.style.opacity = "0";
-
   updateUI("X TURN");
   playResetSound();
 };
