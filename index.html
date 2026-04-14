@@ -110,9 +110,9 @@ body{
 /* WIN BEAM OVERLAY - IMPROVED ALIGNMENT & FULL LENGTH */
 #winBeam{
   position:absolute;
-  top:-24px; 
-  left:-24px; 
-  width:calc(100% + 48px); 
+  top:-24px;
+  left:-24px;
+  width:calc(100% + 48px);
   height:calc(100% + 48px);
   pointer-events:none;
   z-index:10;
@@ -120,7 +120,7 @@ body{
   transition: opacity 0.4s ease-out;
 }
 #winBeam svg{
-  width:100%; 
+  width:100%;
   height:100%;
   filter: drop-shadow(0 0 25px currentColor);
 }
@@ -256,13 +256,11 @@ let boardState = Array(9).fill(null);
 let current = "X";
 let gameOver = false;
 let swap = false;
-
 const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 const winBeam = document.getElementById("winBeam");
-
 /* ===== SOUND SYSTEM (RESTORED) ===== */
 let audioCtx;
 function playSound(freq, duration = 0.1, type = 'sine') {
@@ -289,7 +287,6 @@ function playSparkle() {
 function playResetSound() {
   playSound(420, 0.25, 'sine');
 }
-
 /* CREATE GRID */
 for(let i = 0; i < 9; i++){
   const c = document.createElement("div");
@@ -297,41 +294,48 @@ for(let i = 0; i < 9; i++){
   c.dataset.i = i;
   board.appendChild(c);
 }
-
 /* CELL CENTER POSITIONS (relative to board) */
 function getCellCenter(index) {
   const cell = document.querySelectorAll(".cell")[index];
   const rect = cell.getBoundingClientRect();
   const boardRect = board.getBoundingClientRect();
   return {
-    x: (rect.left + rect.width / 2) - boardRect.left + 24,   // offset for extended beam
+    x: (rect.left + rect.width / 2) - boardRect.left + 24,
     y: (rect.top + rect.height / 2) - boardRect.top + 24
   };
 }
-
-/* DRAW WIN BEAM - FULL LENGTH + PERFECT CENTER ALIGNMENT */
+/* DRAW WIN BEAM - FULL LENGTH + PERFECT CENTER ALIGNMENT + TAPERED SPIKY ENDS */
 function drawWinBeam(winCombo) {
   if (!winCombo) return;
-  
+ 
   const [a, b, c] = winCombo;
   const start = getCellCenter(a);
   const end = getCellCenter(c);
-
   const color = current === "X" ? "#00f0ff" : "#ff00cc";
 
   winBeam.innerHTML = `
     <svg viewBox="0 0 ${board.offsetWidth + 48} ${board.offsetHeight + 48}" xmlns="http://www.w3.org/2000/svg">
-      <line 
-        x1="${start.x}" y1="${start.y}" 
+      <defs>
+        <linearGradient id="beamGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
+          <stop offset="15%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="85%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line
+        x1="${start.x}" y1="${start.y}"
         x2="${end.x}" y2="${end.y}"
-        stroke="${color}"
+        stroke="url(#beamGradient)"
+        stroke-width="18"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
     </svg>
   `;
   winBeam.style.color = color;
   winBeam.style.opacity = "1";
 }
-
 /* UI UPDATE */
 function updateUI(text){
   left.innerHTML = "";
@@ -353,46 +357,39 @@ function updateUI(text){
   `;
   target.classList.add("metal");
 }
-
 /* CLICK */
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
   const i = parseInt(cell.dataset.i);
   if(boardState[i]) return;
-
   boardState[i] = current;
   const m = document.createElement("div");
   m.className = "mark " + current.toLowerCase();
   m.textContent = current;
   cell.appendChild(m);
-
   playPlaceSound(current === "X");
-
   const winCombo = checkWin();
   if(winCombo){
     gameOver = true;
     playSparkle();
-    drawWinBeam(winCombo);           // ← Win Beam
+    drawWinBeam(winCombo);
     updateUI(current + " WINS");
     return;
   }
-
   if(boardState.every(x => x)){
     gameOver = true;
     updateUI("DRAW");
     return;
   }
-
   current = current === "X" ? "O" : "X";
   updateUI(current + " TURN");
 };
-
 /* WIN CHECK - returns the winning combination array */
 const wins = [
-  [0,1,2],[3,4,5],[6,7,8],   // horizontal
-  [0,3,6],[1,4,7],[2,5,8],   // vertical
-  [0,4,8],[2,4,6]            // diagonal
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
 ];
 function checkWin(){
   return wins.find(([a,b,c]) =>
@@ -401,22 +398,20 @@ function checkWin(){
     boardState[a] === boardState[c]
   );
 }
-
 /* RESET */
 restartBtn.onclick = () => {
   boardState = Array(9).fill(null);
   current = "X";
   gameOver = false;
   swap = !swap;
-  
+ 
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";           // Clear beam
+  winBeam.innerHTML = "";
   winBeam.style.opacity = "0";
-  
+ 
   updateUI("X TURN");
   playResetSound();
 };
-
 updateUI("X TURN");
 </script>
 </body>
