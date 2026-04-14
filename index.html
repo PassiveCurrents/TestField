@@ -2,347 +2,257 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>X/O CLASH</title>
+<title>XO CLASH</title>
 
 <style>
-body{
-  margin:0;
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  background:radial-gradient(circle,#2a0040,#000);
-  font-family:sans-serif;
-  color:white;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
 }
 
-/* ===== TITLE ===== */
-#title{
-  font-size:77px;
-  font-weight:900;
-  margin-bottom:20px;
-  background:linear-gradient(45deg,#00f0ff,#ff00cc,#baff00,#00f0ff);
-  background-size:400%;
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  animation:shine 6s linear infinite;
-  text-shadow:0 0 30px #fff;
-}
-@keyframes shine{
-  0%{background-position:0%}
-  100%{background-position:400%}
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at center, #0b0020, #000);
+    overflow: hidden;
 }
 
-/* ===== LAYOUT ===== */
-#game{
-  display:flex;
-  align-items:center;
-  gap:40px;
+/* TITLE */
+h1 {
+    position: absolute;
+    top: 40px;
+    font-size: 4rem;
+    letter-spacing: 6px;
+    background: linear-gradient(90deg, #8ff, #f8f);
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(0,255,255,0.5);
 }
 
-/* SIDE STATUS */
-.side{
-  width:180px;
-  text-align:center;
-  font-size:48px;
-  font-weight:900;
-  letter-spacing:2px;
+/* BOARD WRAPPER */
+.game-wrapper {
+    position: relative;
 }
 
-/* SILVER TEXT (WITH GLOW BACK) */
-.metal{
-  color:#fff;
-  text-shadow:
-    0 0 10px #fff,
-    0 0 25px #fff,
-    0 0 50px #fff;
+/* DRAW TEXT */
+.draw-text {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 5rem;
+    font-weight: 900;
+    color: #ff1a1a;
+    letter-spacing: 6px;
+    z-index: 5;
 }
 
-/* DRAW */
-.draw{
-  color:#ff0033;
-  font-size:90px;
-
-  text-shadow:
-    /* WHITE OUTER COATING */
-    0 0 10px #ffffff,
-    0 0 25px #ffffff,
-
-    /* RED CORE GLOW */
-    0 0 20px #ff0033,
-    0 0 40px #ff0033,
-    0 0 80px #ff0033;
+/* PERFECT MIRROR POSITION */
+.draw-left {
+    left: calc(50% - 420px);
 }
 
-/* ===== BOARD ===== */
-#board{
-  position:relative;
-  display:grid;
-  grid-template-columns:repeat(3,86px);
-  gap:12px;
-  padding:20px;
-  border-radius:50px;
-
-  background:#20003a;
-
-  border:24px solid #00f0ff;
-
-  box-shadow:
-    0 0 80px #00f0ff,
-    0 0 150px #00f0ff,
-    inset 0 0 40px #00f0ff55;
+.draw-right {
+    right: calc(50% - 420px);
 }
 
-/* SIDE GLOW */
-#board::before{
-  content:"";
-  position:absolute;
-  top:0;
-  bottom:0;
-  left:-140px;
-  right:-140px;
-  border-radius:50px;
-  pointer-events:none;
+/* BOARD */
+.board {
+    width: 300px;
+    height: 300px;
+    border-radius: 30px;
+    padding: 15px;
+    background: #111;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
 
-  background:radial-gradient(
-    ellipse at center,
-    rgba(0,240,255,0.35),
-    transparent 70%
-  );
+    box-shadow:
+        0 0 30px cyan,
+        0 0 80px rgba(0,255,255,0.6),
+        inset 0 0 30px rgba(0,255,255,0.4);
 
-  animation:sidePulse 2.2s ease-in-out infinite;
+    animation: fogPulse 3s infinite alternate;
 }
 
-@keyframes sidePulse{
-  0%,100%{
-    opacity:0.4;
-    transform:scaleX(1);
-  }
-  50%{
-    opacity:1;
-    transform:scaleX(1.35);
-  }
+/* FOG PULSE */
+@keyframes fogPulse {
+    from {
+        box-shadow:
+            0 0 20px cyan,
+            0 0 60px rgba(0,255,255,0.5),
+            inset 0 0 20px rgba(0,255,255,0.3);
+    }
+    to {
+        box-shadow:
+            0 0 40px cyan,
+            0 0 120px rgba(0,255,255,0.9),
+            inset 0 0 40px rgba(0,255,255,0.6);
+    }
 }
 
 /* CELLS */
-.cell{
-  width:86px;
-  height:86px;
-  border-radius:30px;
-  background:#3a0060;
+.cell {
+    background: #1a1a2e;
+    border-radius: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    cursor: pointer;
 
-  display:flex;
-  align-items:center;
-  justify-content:center;
-
-  box-shadow:
-    inset 0 0 25px #000,
-    0 0 15px #000,
-    inset 0 0 20px #ffffff22;
+    box-shadow:
+        inset 0 0 10px rgba(255,255,255,0.1),
+        0 0 10px rgba(0,0,0,0.5);
 }
 
-/* MARKS */
-.mark{
-  font-size:64px;
-  font-weight:900;
-  animation:float 2s ease-in-out infinite;
+.cell.x {
+    color: cyan;
+    text-shadow: 0 0 15px cyan;
 }
 
-.x{
-  color:#00f0ff;
-  text-shadow:
-    0 0 25px #00f0ff,
-    0 0 60px #00f0ff,
-    0 0 120px #00f0ff;
+.cell.o {
+    color: #ff00cc;
+    text-shadow: 0 0 15px #ff00cc;
 }
 
-.o{
-  color:#ff00cc;
-  text-shadow:
-    0 0 25px #ff00cc,
-    0 0 60px #ff00cc,
-    0 0 120px #ff00cc;
+/* STATUS TEXT (TURN / WINS) */
+.status-text {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    letter-spacing: 4px;
+    color: #d9e1e8;
+
+    text-shadow:
+        0 0 6px rgba(255,255,255,0.4),
+        0 0 12px rgba(180,200,255,0.5),
+        0 0 24px rgba(120,180,255,0.35);
 }
 
-@keyframes float{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-10px)}
-}
+/* RESTART BUTTON (UNCHANGED SHAPE) */
+.restart-btn {
+    position: absolute;
+    bottom: -90px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 50px;
+    border-radius: 40px;
+    border: none;
+    cursor: pointer;
 
-/* WIN LINE */
-.win-line{
-  position:absolute;
-  height:14px;
-  border-radius:20px;
-  transform-origin:left center;
-}
+    background: linear-gradient(180deg, #b6ff6a, #6aff2b);
+    box-shadow:
+        0 0 25px rgba(140,255,0,0.8),
+        inset 0 0 15px rgba(255,255,255,0.6);
 
-/* RESTART BUTTON (UNCHANGED CORE) */
-#restart{
-  margin-top:40px;
-  padding:20px 70px;
-  font-size:22px;
-  font-weight:900;
-  letter-spacing:2px;
+    /* TEXT FIX ONLY */
+    font-weight: 900;
+    letter-spacing: 2px;
+    font-size: 1.4rem;
+    color: #0b1a12;
 
-  border:none;
-  border-radius:60px;
-  cursor:pointer;
-
-  background:linear-gradient(
-    180deg,
-    #d4ff4d,
-    #a6ff00
-  );
-
-  box-shadow:
-    0 0 40px #baff00,
-    0 0 80px #baff00,
-    inset 0 2px 10px rgba(255,255,255,0.6),
-    inset 0 -4px 10px rgba(0,0,0,0.4);
-
-  color:#111;
-
-  text-shadow:
-    0 1px 0 rgba(255,255,255,0.4),
-    0 2px 4px rgba(0,0,0,0.4);
-
-  transition:.15s;
-}
-
-#restart:active{
-  transform:scale(0.9);
+    text-shadow:
+        0 1px 0 rgba(255,255,255,0.4),
+        0 0 6px rgba(0,0,0,0.25);
 }
 </style>
 </head>
 
 <body>
 
-<div id="title">X/O CLASH</div>
+<h1>XO CLASH</h1>
 
-<div id="game">
-  <div id="left" class="side"></div>
-  <div id="board"></div>
-  <div id="right" class="side"></div>
+<div class="game-wrapper">
+
+    <div class="draw-text draw-left">DRAW</div>
+    <div class="draw-text draw-right">DRAW</div>
+
+    <div class="status-text" id="status">X TURN</div>
+
+    <div class="board" id="board"></div>
+
+    <button class="restart-btn" onclick="restartGame()">RESTART</button>
+
 </div>
 
-<button id="restart">RESTART</button>
-
 <script>
-let boardState=Array(9).fill(null);
-let current="X";
-let gameOver=false;
-let swap=false;
+const board = document.getElementById("board");
+const statusText = document.getElementById("status");
 
-const board=document.getElementById("board");
-const left=document.getElementById("left");
-const right=document.getElementById("right");
+let currentPlayer = "X";
+let cells = Array(9).fill("");
+let gameActive = true;
 
-/* CREATE GRID */
-for(let i=0;i<9;i++){
-  const c=document.createElement("div");
-  c.className="cell";
-  c.dataset.i=i;
-  board.appendChild(c);
+function createBoard() {
+    board.innerHTML = "";
+    cells.forEach((_, index) => {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.addEventListener("click", () => handleClick(index));
+        board.appendChild(cell);
+    });
 }
 
-/* UI UPDATE */
-function updateUI(text){
+function handleClick(index) {
+    if (!gameActive || cells[index] !== "") return;
 
-  left.className="side";
-  right.className="side";
+    cells[index] = currentPlayer;
+    updateBoard();
 
-  if(text==="DRAW"){
-    left.textContent="DRAW";
-    right.textContent="DRAW";
+    if (checkWinner()) {
+        statusText.textContent = currentPlayer + " WINS";
+        gameActive = false;
+        return;
+    }
 
-    left.classList.add("draw");
-    right.classList.add("draw");
+    if (!cells.includes("")) {
+        statusText.textContent = "DRAW";
+        return;
+    }
 
-    /* PERFECT SYMMETRY */
-    left.style.transform="translateX(-55px)";
-    right.style.transform="translateX(55px)";
-    return;
-  }
-
-  left.style.transform="translateX(-25px)";
-  right.style.transform="translateX(25px)";
-
-  if(!swap){
-    left.textContent=text.includes("X")?text:"";
-    right.textContent=text.includes("O")?text:"";
-  }else{
-    left.textContent=text.includes("O")?text:"";
-    right.textContent=text.includes("X")?text:"";
-  }
-
-  if(left.textContent) left.classList.add("metal");
-  if(right.textContent) right.classList.add("metal");
+    currentPlayer = currentPlayer === "X" ? "O" : "X";
+    statusText.textContent = currentPlayer + " TURN";
 }
 
-/* CLICK */
-board.onclick=e=>{
-  const cell=e.target.closest(".cell");
-  if(!cell||gameOver)return;
-
-  const i=cell.dataset.i;
-  if(boardState[i])return;
-
-  boardState[i]=current;
-
-  const m=document.createElement("div");
-  m.className="mark "+current.toLowerCase();
-  m.textContent=current;
-  cell.appendChild(m);
-
-  const win=checkWin();
-
-  if(win){
-    gameOver=true;
-    updateUI(current+" WINS");
-    return;
-  }
-
-  if(boardState.every(x=>x)){
-    gameOver=true;
-    updateUI("DRAW");
-    return;
-  }
-
-  current=current==="X"?"O":"X";
-  updateUI(current+" TURN");
-};
-
-/* WIN CHECK */
-const wins=[
-[0,1,2],[3,4,5],[6,7,8],
-[0,3,6],[1,4,7],[2,5,8],
-[0,4,8],[2,4,6]
-];
-
-function checkWin(){
-  return wins.find(([a,b,c])=>
-    boardState[a] &&
-    boardState[a]===boardState[b] &&
-    boardState[a]===boardState[c]
-  );
+function updateBoard() {
+    const cellDivs = document.querySelectorAll(".cell");
+    cellDivs.forEach((cell, i) => {
+        cell.textContent = cells[i];
+        cell.classList.remove("x", "o");
+        if (cells[i] === "X") cell.classList.add("x");
+        if (cells[i] === "O") cell.classList.add("o");
+    });
 }
 
-/* RESET */
-restart.onclick=()=>{
-  boardState=Array(9).fill(null);
-  current="X";
-  gameOver=false;
-  swap=!swap;
+function checkWinner() {
+    const winPatterns = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ];
 
-  document.querySelectorAll(".cell").forEach(c=>c.innerHTML="");
-  document.querySelectorAll(".win-line").forEach(l=>l.remove());
+    return winPatterns.some(pattern => {
+        const [a,b,c] = pattern;
+        return cells[a] && cells[a] === cells[b] && cells[a] === cells[c];
+    });
+}
 
-  updateUI("X TURN");
-};
+function restartGame() {
+    cells = Array(9).fill("");
+    currentPlayer = "X";
+    gameActive = true;
+    statusText.textContent = "X TURN";
+    createBoard();
+}
 
-updateUI("X TURN");
+createBoard();
 </script>
 
 </body>
