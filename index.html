@@ -17,7 +17,7 @@ body{
   color:white;
 }
 
-/* ===== TITLE ===== */
+/* ===== TITLE (UNCHANGED) ===== */
 #title{
   font-size:77px;
   font-weight:900;
@@ -38,39 +38,42 @@ body{
 #game{
   display:flex;
   align-items:center;
-  gap:40px;
+  justify-content:center;
+  gap:180px; /* ← FIXED spacing so LEFT never enters fog */
 }
 
 /* SIDE STATUS */
 .side{
-  width:180px;
+  width:200px;
   text-align:center;
   font-size:48px;
   font-weight:900;
   letter-spacing:2px;
 }
 
-/* SILVER METAL (NO GLOW NOW) */
+/* SILVER MIRROR EFFECT */
 .metal{
   background:linear-gradient(
-    180deg,
+    120deg,
     #ffffff 0%,
-    #d0d0d0 25%,
-    #ffffff 50%,
-    #999 75%,
-    #ffffff 100%
+    #d0f0ff 20%,
+    #ffffff 40%,
+    #999 60%,
+    #ffffff 80%
   );
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
 
-  /* removed glow */
-  text-shadow:none;
+  text-shadow:
+    0 0 10px #ffffff,
+    0 0 25px #00f0ff,
+    0 0 40px #ffffff;
 }
 
-/* DRAW */
+/* DRAW STYLE */
 .draw{
   color:#ff0033;
-  font-size:90px;
+  font-size:80px;
   text-shadow:
     0 0 20px #ff0033,
     0 0 40px #ff0033,
@@ -81,9 +84,9 @@ body{
 #board{
   position:relative;
   display:grid;
-  grid-template-columns:repeat(3,86px);
+  grid-template-columns:repeat(3,85px);
   gap:12px;
-  padding:20px;
+  padding:22px;
   border-radius:50px;
 
   background:#20003a;
@@ -96,7 +99,7 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
-/* SIDE GLOW */
+/* STRONGER SIDE FOG */
 #board::before{
   content:"";
   position:absolute;
@@ -118,7 +121,7 @@ body{
 
 @keyframes sidePulse{
   0%,100%{
-    opacity:0.4;
+    opacity:0.5;
     transform:scaleX(1);
   }
   50%{
@@ -129,15 +132,13 @@ body{
 
 /* CELLS */
 .cell{
-  width:86px;
-  height:86px;
+  width:85px;
+  height:85px;
   border-radius:30px;
   background:#3a0060;
-
   display:flex;
   align-items:center;
   justify-content:center;
-
   box-shadow:
     inset 0 0 25px #000,
     0 0 15px #000,
@@ -146,7 +147,7 @@ body{
 
 /* MARKS */
 .mark{
-  font-size:64px;
+  font-size:60px;
   font-weight:900;
   animation:float 2s ease-in-out infinite;
 }
@@ -180,10 +181,10 @@ body{
   transform-origin:left center;
 }
 
-/* RESTART BUTTON (MATCHED STYLE) */
+/* RESTART (UPGRADED LIKE PIC 2) */
 #restart{
   margin-top:40px;
-  padding:20px 70px;
+  padding:20px 72px;
   font-size:22px;
   font-weight:900;
   letter-spacing:2px;
@@ -192,27 +193,27 @@ body{
   border-radius:60px;
   cursor:pointer;
 
-  background:linear-gradient(
-    180deg,
-    #d4ff4d,
-    #a6ff00
-  );
+  background:#baff00;
 
+  /* white coating */
   box-shadow:
+    0 0 0 6px rgba(255,255,255,0.15),
     0 0 40px #baff00,
     0 0 80px #baff00,
-    inset 0 2px 10px rgba(255,255,255,0.6),
-    inset 0 -4px 10px rgba(0,0,0,0.4);
+    inset 0 0 12px rgba(255,255,255,0.6),
+    inset 0 0 10px #000;
 
-  color:#111;
+  color:#000;
 
-  text-shadow:none;
+  text-shadow:
+    0 0 3px #000,
+    0 0 6px #000;
 
   transition:.15s;
 }
 
 #restart:active{
-  transform:scale(0.9);
+  transform:scale(0.85);
 }
 </style>
 </head>
@@ -247,37 +248,97 @@ for(let i=0;i<9;i++){
   board.appendChild(c);
 }
 
+/* AUDIO */
+let ctx;
+function sound(freq,time){
+  if(!ctx) ctx=new AudioContext();
+  const o=ctx.createOscillator();
+  const g=ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.frequency.value=freq;
+  g.gain.setValueAtTime(0.2,ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+time);
+  o.start();
+  o.stop(ctx.currentTime+time);
+}
+
+/* SPARKS */
+function sparks(x,y,color){
+  for(let i=0;i<12;i++){
+    const s=document.createElement("div");
+    s.style.position="fixed";
+    s.style.left=x+"px";
+    s.style.top=y+"px";
+    s.style.width="6px";
+    s.style.height="6px";
+    s.style.background=color;
+    s.style.borderRadius="50%";
+
+    const dx=Math.random()*140-70;
+    const dy=Math.random()*140-70;
+
+    document.body.appendChild(s);
+
+    requestAnimationFrame(()=>{
+      s.style.transition="all .4s";
+      s.style.transform=`translate(${dx}px,${dy}px)`;
+      s.style.opacity="0";
+    });
+
+    setTimeout(()=>s.remove(),400);
+  }
+}
+
+/* WIN CHECK */
+const wins=[
+[0,1,2],[3,4,5],[6,7,8],
+[0,3,6],[1,4,7],[2,5,8],
+[0,4,8],[2,4,6]
+];
+
+function checkWin(){
+  return wins.find(([a,b,c])=>
+    boardState[a] &&
+    boardState[a]===boardState[b] &&
+    boardState[a]===boardState[c]
+  );
+}
+
 /* UI UPDATE */
 function updateUI(text){
 
-  left.className="side";
-  right.className="side";
+  left.classList.remove("draw","metal");
+  right.classList.remove("draw","metal");
 
   if(text==="DRAW"){
     left.textContent="DRAW";
     right.textContent="DRAW";
-
     left.classList.add("draw");
     right.classList.add("draw");
-
-    left.style.transform="translateX(-40px)";
-    right.style.transform="translateX(15px)";
     return;
   }
 
-  left.style.transform="translateX(-25px)";
-  right.style.transform="translateX(25px)";
-
   if(!swap){
-    left.textContent=text.includes("X")?text:"";
-    right.textContent=text.includes("O")?text:"";
+    if(text.includes("X")){
+      left.textContent=text;
+      left.classList.add("metal");
+      right.textContent="";
+    }else{
+      right.textContent=text;
+      right.classList.add("metal");
+      left.textContent="";
+    }
   }else{
-    left.textContent=text.includes("O")?text:"";
-    right.textContent=text.includes("X")?text:"";
+    if(text.includes("X")){
+      right.textContent=text;
+      right.classList.add("metal");
+      left.textContent="";
+    }else{
+      left.textContent=text;
+      left.classList.add("metal");
+      right.textContent="";
+    }
   }
-
-  if(left.textContent) left.classList.add("metal");
-  if(right.textContent) right.classList.add("metal");
 }
 
 /* CLICK */
@@ -294,6 +355,11 @@ board.onclick=e=>{
   m.className="mark "+current.toLowerCase();
   m.textContent=current;
   cell.appendChild(m);
+
+  const rect=cell.getBoundingClientRect();
+  sparks(rect.left+rect.width/2,rect.top+rect.height/2,current==="X"?"#00f0ff":"#ff00cc");
+
+  sound(600,0.1);
 
   const win=checkWin();
 
@@ -313,21 +379,6 @@ board.onclick=e=>{
   updateUI(current+" TURN");
 };
 
-/* WIN CHECK */
-const wins=[
-[0,1,2],[3,4,5],[6,7,8],
-[0,3,6],[1,4,7],[2,5,8],
-[0,4,8],[2,4,6]
-];
-
-function checkWin(){
-  return wins.find(([a,b,c])=>
-    boardState[a] &&
-    boardState[a]===boardState[b] &&
-    boardState[a]===boardState[c]
-  );
-}
-
 /* RESET */
 restart.onclick=()=>{
   boardState=Array(9).fill(null);
@@ -339,6 +390,7 @@ restart.onclick=()=>{
   document.querySelectorAll(".win-line").forEach(l=>l.remove());
 
   updateUI("X TURN");
+  sound(300,0.2);
 };
 
 updateUI("X TURN");
