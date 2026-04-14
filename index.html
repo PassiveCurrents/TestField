@@ -125,25 +125,15 @@ body{
   filter: drop-shadow(0 0 25px currentColor);
 }
 #winBeam line{
-  stroke: url(#beamGradient);
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
   animation: beamBlastSettle 1.35s ease-out forwards;
 }
 @keyframes beamBlastSettle{
-  0%{
-    stroke-width: 34;
-    opacity: 0.9;
-  }
-  30%{
-    stroke-width: 28;
-    opacity: 1;
-  }
-  100%{
-    stroke-width: 11;
-    opacity: 1;
-  }
+  0% { stroke-width: 34; opacity: 0.9; }
+  30% { stroke-width: 28; opacity: 1; }
+  100% { stroke-width: 11; opacity: 1; }
 }
 /* FOG */
 #board::before{
@@ -297,7 +287,7 @@ for(let i = 0; i < 9; i++){
   c.dataset.i = i;
   board.appendChild(c);
 }
-/* CELL CENTER POSITIONS (relative to board) */
+/* CELL CENTER POSITIONS */
 function getCellCenter(index) {
   const cell = document.querySelectorAll(".cell")[index];
   const rect = cell.getBoundingClientRect();
@@ -307,7 +297,7 @@ function getCellCenter(index) {
     y: (rect.top + rect.height / 2) - boardRect.top + 24
   };
 }
-/* DRAW WIN BEAM - UPGRADED: thicker blast → settle thinner + tapered ends */
+/* DRAW WIN BEAM - FIXED & FULL EFFECTS (thicker blast → settle + tapered ends) */
 function drawWinBeam(winCombo) {
   if (!winCombo) return;
  
@@ -319,16 +309,18 @@ function drawWinBeam(winCombo) {
   winBeam.innerHTML = `
     <svg viewBox="0 0 ${board.offsetWidth + 48} ${board.offsetHeight + 48}" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="beamGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id="beamGradient" gradientUnits="objectBoundingBox" x1="0%" y1="50%" x2="100%" y2="50%">
           <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
-          <stop offset="12%" stop-color="${color}" stop-opacity="1"/>
-          <stop offset="88%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="15%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="85%" stop-color="${color}" stop-opacity="1"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
         </linearGradient>
       </defs>
       <line
-        x1="${start.x}" y1="${start.y}"
-        x2="${end.x}" y2="${end.y}"
+        x1="${start.x}" 
+        y1="${start.y}"
+        x2="${end.x}" 
+        y2="${end.y}"
         stroke="url(#beamGradient)"
         stroke-width="18"
         stroke-linecap="round"
@@ -388,7 +380,7 @@ board.onclick = e => {
   current = current === "X" ? "O" : "X";
   updateUI(current + " TURN");
 };
-/* WIN CHECK - returns the winning combination array */
+/* WIN CHECK */
 const wins = [
   [0,1,2],[3,4,5],[6,7,8],
   [0,3,6],[1,4,7],[2,5,8],
@@ -409,7 +401,7 @@ restartBtn.onclick = () => {
   swap = !swap;
  
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";           // Clear beam completely
+  winBeam.innerHTML = "";
   winBeam.style.opacity = "0";
  
   updateUI("X TURN");
