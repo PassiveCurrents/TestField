@@ -1,11 +1,9 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>X/O CLASH</title>
-
 <style>
-/* ===== BASE ===== */
 body{
   margin:0;
   height:100vh;
@@ -18,7 +16,6 @@ body{
   color:white;
   overflow:hidden;
 }
-
 /* ===== TITLE ===== */
 #title{
   font-size:77px;
@@ -35,7 +32,6 @@ body{
   0%{background-position:0%}
   100%{background-position:400%}
 }
-
 /* ===== LAYOUT ===== */
 #game{
   display:flex;
@@ -43,30 +39,44 @@ body{
   justify-content:center;
   gap:220px;
 }
-
+/* SIDE STATUS */
 .side{
   width:220px;
   text-align:center;
   font-size:48px;
   font-weight:900;
   letter-spacing:2px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
+  white-space:nowrap;
+  margin-left: -68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
-
-.symbol{
-  font-size:82px;
-  margin-bottom:6px;
+/* SYMBOL ABOVE TEXT */
+.side .symbol {
+  font-size: 82px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow:
+    0 0 12px #ffffff,
+    0 0 28px #d0f0ff,
+    0 0 50px #ffffff;
 }
-
+/* TEXT UNDER SYMBOL */
+.side .label {
+  display:block;
+}
+/* METAL TEXT */
 .metal{
+  color:#fff;
   text-shadow:
     0 0 10px #fff,
     0 0 25px #fff,
     0 0 50px #fff;
 }
-
+/* DRAW TEXT */
 .draw{
   color:#ff0033;
   font-size:90px;
@@ -76,8 +86,12 @@ body{
     0 0 20px #ff0033,
     0 0 40px #ff0033,
     0 0 80px #ff0033;
+  animation: drawPulse 3.2s ease-in-out infinite;
 }
-
+@keyframes drawPulse {
+  0%, 100% { opacity: 0.92; }
+  50% { opacity: 1; }
+}
 /* ===== BOARD ===== */
 #board{
   position:relative;
@@ -93,8 +107,59 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-
-/* ===== CELLS ===== */
+/* WIN BEAM OVERLAY */
+#winBeam{
+  position:absolute;
+  top:0; left:0; width:100%; height:100%;
+  pointer-events:none;
+  z-index:10;
+  opacity:0;
+  transition: opacity 0.4s ease-out;
+}
+#winBeam svg{
+  width:100%; height:100%;
+  filter: drop-shadow(0 0 25px currentColor);
+}
+#winBeam line{
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 18;
+  filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
+  animation: beamSettle 1.2s ease-out forwards;
+}
+@keyframes beamSettle{
+  0%{
+    stroke-width: 32;
+    opacity: 0.95;
+  }
+  100%{
+    stroke-width: 11;
+    opacity: 1;
+  }
+}
+/* FOG */
+#board::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:-140px;
+  right:-140px;
+  border-radius:50px;
+  pointer-events:none;
+  background:radial-gradient(
+    ellipse at center,
+    rgba(0,240,255,0.35),
+    transparent 70%
+  );
+  animation:sidePulse 2.2s ease-in-out infinite;
+}
+@keyframes sidePulse{
+  0%,100%{ opacity:0.4; transform:scaleX(1); }
+  50%{ opacity:1; transform:scaleX(1.35); }
+}
+/* CELLS */
 .cell{
   width:86px;
   height:86px;
@@ -103,244 +168,252 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
+  box-shadow:
+    inset 0 0 25px #000,
+    0 0 15px #000,
+    inset 0 0 20px #ffffff22;
 }
-
+/* MARKS */
 .mark{
   font-size:64px;
   font-weight:900;
+  animation:float 2s ease-in-out infinite;
 }
-
 .x{
   color:#00f0ff;
-  text-shadow:0 0 40px #00f0ff;
+  text-shadow:
+    0 0 25px #00f0ff,
+    0 0 60px #00f0ff,
+    0 0 120px #00f0ff;
 }
 .o{
   color:#ff00cc;
-  text-shadow:0 0 40px #ff00cc;
+  text-shadow:
+    0 0 25px #ff00cc,
+    0 0 60px #ff00cc,
+    0 0 120px #ff00cc;
 }
-
-/* ===== WIN BEAM ===== */
-.win-line{
-  position:absolute;
-  height:16px;
-  pointer-events:none;
-  transform-origin:left center;
-  z-index:5;
-
-  /* CORE = transparent / black */
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(0,0,0,0.9) 10%,
-    rgba(0,0,0,0.95) 50%,
-    rgba(0,0,0,0.9) 90%,
-    transparent 100%
-  );
-
-  /* EDGE GLOW ONLY */
-  box-shadow:
-    0 0 10px currentColor,
-    0 0 25px currentColor;
-
-  /* SHARP FADING ENDS */
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 10%,
-    black 90%,
-    transparent
-  );
-
-  animation:beamBlast 0.35s ease-out forwards,
-             beamSettle 0.6s ease-out forwards;
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-10px)}
 }
-
-@keyframes beamBlast{
-  from{
-    transform:scaleX(0);
-    height:40px;
-    opacity:1;
-  }
-  to{
-    transform:scaleX(1);
-    height:26px;
-    opacity:1;
-  }
-}
-
-@keyframes beamSettle{
-  from{
-    height:26px;
-    opacity:1;
-  }
-  to{
-    height:12px;
-    opacity:0.95;
-  }
-}
-
-/* ===== BUTTON ===== */
+/* RESTART BUTTON */
 #restart{
   margin-top:40px;
   padding:18px 80px;
-  font-size:26px;
+  font-size:24px;
   font-weight:900;
-  border-radius:60px;
+  letter-spacing:3px;
   border:none;
+  border-radius:60px;
   cursor:pointer;
-  background:linear-gradient(#d4ff4d,#a6ff00);
+  background:linear-gradient(180deg, #d4ff4d, #a6ff00);
+  color:#111;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.5),
+    0 2px 4px rgba(0,0,0,0.4);
+  box-shadow:
+    0 0 40px #baff00,
+    0 0 80px #baff00,
+    inset 0 4px 12px rgba(255,255,255,0.7),
+    inset 0 -6px 12px rgba(0,0,0,0.3);
+  position: relative;
+  overflow: hidden;
+}
+#restart::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 65px;
+  background: linear-gradient(white, rgba(255,255,255,0.65));
+  z-index: -1;
+  filter: blur(8px);
+  opacity: 0.85;
+}
+#restart:active{
+  transform:scale(0.93);
 }
 </style>
 </head>
-
 <body>
-
 <div id="title">X/O CLASH</div>
-
 <div id="game">
   <div id="left" class="side"></div>
-  <div id="board"></div>
+  <div id="board">
+    <!-- Win Beam Overlay -->
+    <div id="winBeam"></div>
+  </div>
   <div id="right" class="side"></div>
 </div>
-
 <button id="restart">RESTART</button>
 
 <script>
-
-/* ===== STATE ===== */
 let boardState = Array(9).fill(null);
 let current = "X";
 let gameOver = false;
+let swap = false;
 
 const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
+const winBeam = document.getElementById("winBeam");
 
-/* ===== SOUND ===== */
+/* ===== SOUND SYSTEM (RESTORED) ===== */
 let audioCtx;
-function playSound(freq){
-  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.frequency.value = freq;
-  g.gain.value = 0.2;
-  o.connect(g);
-  g.connect(audioCtx.destination);
-  o.start();
-  o.stop(audioCtx.currentTime + 0.1);
+function playSound(freq, duration = 0.1, type = 'sine') {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration);
+}
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
+function playSparkle() {
+  playSound(880, 0.08, 'sine');
+  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
+  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+}
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
 }
 
-/* ===== GRID ===== */
-for(let i=0;i<9;i++){
-  const c=document.createElement("div");
-  c.className="cell";
-  c.dataset.i=i;
+/* CREATE GRID */
+for(let i = 0; i < 9; i++){
+  const c = document.createElement("div");
+  c.className = "cell";
+  c.dataset.i = i;
   board.appendChild(c);
 }
 
-/* ===== UI ===== */
+/* CELL CENTER POSITIONS (relative to board) */
+function getCellCenter(index) {
+  const cell = document.querySelectorAll(".cell")[index];
+  const rect = cell.getBoundingClientRect();
+  const boardRect = board.getBoundingClientRect();
+  return {
+    x: (rect.left + rect.width / 2) - boardRect.left,
+    y: (rect.top + rect.height / 2) - boardRect.top
+  };
+}
+
+/* DRAW WIN BEAM */
+function drawWinBeam(winCombo) {
+  if (!winCombo) return;
+  
+  const [a, b, c] = winCombo;
+  const start = getCellCenter(a);
+  const end = getCellCenter(c);   // middle cell not needed for line
+
+  const color = current === "X" ? "#00f0ff" : "#ff00cc";
+
+  winBeam.innerHTML = `
+    <svg viewBox="0 0 ${board.offsetWidth} ${board.offsetHeight}" xmlns="http://www.w3.org/2000/svg">
+      <line 
+        x1="${start.x}" y1="${start.y}" 
+        x2="${end.x}" y2="${end.y}"
+        stroke="${color}"
+      />
+    </svg>
+  `;
+  winBeam.style.color = color;
+  winBeam.style.opacity = "1";
+}
+
+/* UI UPDATE */
 function updateUI(text){
-  left.innerHTML="";
-  right.innerHTML="";
-  if(text==="DRAW"){
-    left.innerHTML=`<span class="draw">DRAW</span>`;
-    right.innerHTML=`<span class="draw">DRAW</span>`;
+  left.innerHTML = "";
+  right.innerHTML = "";
+  left.className = "side";
+  right.className = "side";
+  if(text === "DRAW"){
+    left.innerHTML = `<span class="draw">DRAW</span>`;
+    right.innerHTML = `<span class="draw">DRAW</span>`;
     return;
   }
-  left.innerHTML=`<span class="symbol">${current}</span><span>${text}</span>`;
+  const cleanText = text.replace("X","").replace("O","").trim();
+  const symbol = current === "X" ? "X" : "O";
+  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
+  const target = isLeft ? left : right;
+  target.innerHTML = `
+    <span class="symbol">${symbol}</span>
+    <span class="label">${cleanText}</span>
+  `;
+  target.classList.add("metal");
 }
 
-/* ===== WIN ===== */
-const wins=[
-[0,1,2],[3,4,5],[6,7,8],
-[0,3,6],[1,4,7],[2,5,8],
-[0,4,8],[2,4,6]
-];
-
-function drawBeam(a,b,c){
-  const cells=[a,b,c].map(i=>document.querySelector(`[data-i='${i}']`));
-  const r1=cells[0].getBoundingClientRect();
-  const r3=cells[2].getBoundingClientRect();
-  const br=board.getBoundingClientRect();
-
-  const x1=r1.left+r1.width/2-br.left;
-  const y1=r1.top+r1.height/2-br.top;
-  const x2=r3.left+r3.width/2-br.left;
-  const y2=r3.top+r3.height/2-br.top;
-
-  const dx=x2-x1;
-  const dy=y2-y1;
-  const len=Math.sqrt(dx*dx+dy*dy);
-  const angle=Math.atan2(dy,dx)*180/Math.PI;
-
-  const line=document.createElement("div");
-  line.className="win-line";
-  line.style.width=len+"px";
-  line.style.left=x1+"px";
-  line.style.top=y1+"px";
-  line.style.transform=`rotate(${angle}deg)`;
-
-  line.style.color = current==="X" ? "#00f0ff" : "#ff00cc";
-
-  board.appendChild(line);
-}
-
-function checkWin(){
-  for(const [a,b,c] of wins){
-    if(boardState[a] && boardState[a]===boardState[b] && boardState[a]===boardState[c]){
-      drawBeam(a,b,c);
-      return true;
-    }
-  }
-  return false;
-}
-
-/* ===== CLICK ===== */
-board.onclick=e=>{
-  const cell=e.target.closest(".cell");
-  if(!cell||gameOver) return;
-  const i=cell.dataset.i;
+/* CLICK */
+board.onclick = e => {
+  const cell = e.target.closest(".cell");
+  if(!cell || gameOver) return;
+  const i = parseInt(cell.dataset.i);
   if(boardState[i]) return;
 
-  boardState[i]=current;
-
-  const m=document.createElement("div");
-  m.className="mark "+current.toLowerCase();
-  m.textContent=current;
+  boardState[i] = current;
+  const m = document.createElement("div");
+  m.className = "mark " + current.toLowerCase();
+  m.textContent = current;
   cell.appendChild(m);
 
-  playSound(current==="X"?700:500);
+  playPlaceSound(current === "X");
 
-  if(checkWin()){
-    gameOver=true;
-    updateUI("WINS");
+  const winCombo = checkWin();
+  if(winCombo){
+    gameOver = true;
+    playSparkle();
+    drawWinBeam(winCombo);           // ← Win Beam
+    updateUI(current + " WINS");
     return;
   }
 
-  if(boardState.every(x=>x)){
-    gameOver=true;
+  if(boardState.every(x => x)){
+    gameOver = true;
     updateUI("DRAW");
     return;
   }
 
-  current=current==="X"?"O":"X";
-  updateUI("TURN");
+  current = current === "X" ? "O" : "X";
+  updateUI(current + " TURN");
 };
 
-/* ===== RESET ===== */
-restartBtn.onclick=()=>{
-  boardState=Array(9).fill(null);
-  current="X";
-  gameOver=false;
-  document.querySelectorAll(".cell").forEach(c=>c.innerHTML="");
-  document.querySelectorAll(".win-line").forEach(l=>l.remove());
-  updateUI("TURN");
+/* WIN CHECK - returns the winning combination array */
+const wins = [
+  [0,1,2],[3,4,5],[6,7,8],   // horizontal
+  [0,3,6],[1,4,7],[2,5,8],   // vertical
+  [0,4,8],[2,4,6]            // diagonal
+];
+function checkWin(){
+  return wins.find(([a,b,c]) =>
+    boardState[a] &&
+    boardState[a] === boardState[b] &&
+    boardState[a] === boardState[c]
+  );
+}
+
+/* RESET */
+restartBtn.onclick = () => {
+  boardState = Array(9).fill(null);
+  current = "X";
+  gameOver = false;
+  swap = !swap;
+  
+  document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
+  winBeam.innerHTML = "";           // Clear beam
+  winBeam.style.opacity = "0";
+  
+  updateUI("X TURN");
+  playResetSound();
 };
 
-updateUI("TURN");
-
+updateUI("X TURN");
 </script>
-
 </body>
 </html>
