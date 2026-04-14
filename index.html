@@ -42,7 +42,7 @@ body{
   gap:220px;
 }
 
-/* SIDE STATUS - PLAYER SYMBOL ABOVE TEXT */
+/* SIDE STATUS - SYMBOL ABOVE TEXT */
 .side{
   width:220px;
   text-align:center;
@@ -54,12 +54,12 @@ body{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-/* PLAYER SYMBOL (X or O) */
+/* PLAYER SYMBOL (colored exactly like the mark) */
 .side .symbol {
-  font-size: 72px;
+  font-size: 78px;
   font-weight: 900;
   line-height: 1;
   text-shadow: 0 0 20px currentColor;
@@ -285,7 +285,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* UI UPDATE - PLAYER SYMBOL ABOVE TEXT */
+/* UI UPDATE - SYMBOL ABOVE TEXT (clean & correct color) */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -298,19 +298,17 @@ function updateUI(text){
     return;
   }
 
-  const symbol = current === "X" ? "X" : "O";
-  const symbolColor = current === "X" ? "#00f0ff" : "#ff00cc";
+  // Determine which side gets the message
+  const isXMessage = text.includes("X");
+  const targetSide = (!swap && isXMessage) || (swap && !isXMessage) ? left : right;
+  const symbol = isXMessage ? "X" : "O";
+  const symbolColor = isXMessage ? "#00f0ff" : "#ff00cc";
 
-  if(text.includes("WINS") || text.includes("TURN")){
-    const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
-    const target = isLeft ? left : right;
-
-    target.innerHTML = `
-      <span class="symbol" style="color:${symbolColor}">${symbol}</span>
-      <span>${text}</span>
-    `;
-    target.classList.add("metal");
-  }
+  targetSide.innerHTML = `
+    <span class="symbol" style="color:${symbolColor}">${symbol}</span>
+    <span>${text}</span>
+  `;
+  targetSide.classList.add("metal");
 }
 
 /* CLICK */
