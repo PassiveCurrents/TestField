@@ -224,6 +224,7 @@ body{
 </style>
 </head>
 <body>
+
 <div id="title">X/O CLASH</div>
 
 <div id="game">
@@ -245,6 +246,41 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
+/* ===== SOUND SYSTEM (RESTORED) ===== */
+let audioCtx;
+
+function playSound(freq, duration = 0.1, type = 'sine') {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration);
+}
+
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
+
+function playSparkle() {
+  playSound(880, 0.08, 'sine');
+  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
+  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+}
+
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
+}
+
 /* CREATE GRID */
 for(let i = 0; i < 9; i++){
   const c = document.createElement("div");
@@ -253,7 +289,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* UI UPDATE — FIXED */
+/* UI UPDATE */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -266,9 +302,7 @@ function updateUI(text){
     return;
   }
 
-  // REMOVE X/O FROM TEXT
   const cleanText = text.replace("X","").replace("O","").trim();
-
   const symbol = current === "X" ? "X" : "O";
 
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
@@ -297,10 +331,13 @@ board.onclick = e => {
   m.textContent = current;
   cell.appendChild(m);
 
+  playPlaceSound(current === "X");
+
   const win = checkWin();
 
   if(win){
     gameOver = true;
+    playSparkle();
     updateUI(current + " WINS");
     return;
   }
@@ -340,9 +377,11 @@ restartBtn.onclick = () => {
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
 
   updateUI("X TURN");
+  playResetSound();
 };
 
 updateUI("X TURN");
 </script>
+
 </body>
 </html>
