@@ -107,7 +107,7 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN BEAM (FIXED) */
+/* WIN BEAM OVERLAY */
 #winBeam{
   position:absolute;
   top:0;
@@ -117,30 +117,6 @@ body{
   pointer-events:none;
   z-index:10;
   opacity:0;
-  transition: opacity 0.4s ease-out;
-}
-#winBeam svg{
-  width:100%;
-  height:100%;
-  filter: drop-shadow(0 0 25px currentColor);
-}
-#winBeam line{
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 18;
-  filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
-  animation: beamSettle 1.2s ease-out forwards;
-}
-@keyframes beamSettle{
-  0%{
-    stroke-width: 32;
-    opacity: 0.95;
-  }
-  100%{
-    stroke-width: 11;
-    opacity: 1;
-  }
 }
 /* FOG */
 #board::before{
@@ -240,14 +216,19 @@ body{
 </style>
 </head>
 <body>
+
 <div id="title">X/O CLASH</div>
+
 <div id="game">
   <div id="left" class="side"></div>
+
   <div id="board">
     <div id="winBeam"></div>
   </div>
+
   <div id="right" class="side"></div>
 </div>
+
 <button id="restart">RESTART</button>
 
 <script>
@@ -266,156 +247,172 @@ const winBeam = document.getElementById("winBeam");
 let audioCtx;
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
-  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-  oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
-  oscillator.start();
-  oscillator.stop(audioCtx.currentTime + duration);
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + duration);
 }
-function playPlaceSound(isX) {
-  playSound(isX ? 720 : 540, 0.09, 'triangle');
+function playPlaceSound(isX){ playSound(isX ? 720 : 540, 0.09, 'triangle'); }
+function playSparkle(){
+  playSound(880,0.08); setTimeout(()=>playSound(1100,0.08),40);
+  setTimeout(()=>playSound(1320,0.12),90);
 }
-function playSparkle() {
-  playSound(880, 0.08, 'sine');
-  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
-  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
-}
-function playResetSound() {
-  playSound(420, 0.25, 'sine');
-}
+function playResetSound(){ playSound(420,0.25); }
 
-/* GRID */
-for(let i = 0; i < 9; i++){
-  const c = document.createElement("div");
-  c.className = "cell";
-  c.dataset.i = i;
+/* CREATE GRID */
+for(let i=0;i<9;i++){
+  const c=document.createElement("div");
+  c.className="cell";
+  c.dataset.i=i;
   board.appendChild(c);
 }
 
-/* FIXED CENTER CALCULATION */
-function getCellCenter(index) {
-  const cell = document.querySelectorAll(".cell")[index];
-  const rect = cell.getBoundingClientRect();
-  const boardRect = board.getBoundingClientRect();
+/* ✅ FIXED CENTER CALC (NO OFFSET) */
+function getCellCenter(i){
+  const cell=document.querySelectorAll(".cell")[i];
+  const r=cell.getBoundingClientRect();
+  const br=board.getBoundingClientRect();
   return {
-    x: (rect.left + rect.width / 2) - boardRect.left,
-    y: (rect.top + rect.height / 2) - boardRect.top
+    x:(r.left+r.width/2)-br.left,
+    y:(r.top+r.height/2)-br.top
   };
 }
 
-/* FIXED BEAM */
-function drawWinBeam(winCombo) {
-  if (!winCombo) return;
-  
-  const [a, , c] = winCombo;
-  const start = getCellCenter(a);
-  const end = getCellCenter(c);
+/* ✅ FIXED FULL-LENGTH BEAM */
+function drawWinBeam(combo){
+  const [a,,c]=combo;
+  const s=getCellCenter(a);
+  const e=getCellCenter(c);
 
-  const color = current === "X" ? "#00f0ff" : "#ff00cc";
+  const dx=e.x-s.x;
+  const dy=e.y-s.y;
 
-  winBeam.innerHTML = `
-    <svg viewBox="0 0 ${board.offsetWidth} ${board.offsetHeight}" xmlns="http://www.w3.org/2000/svg">
-      <line 
-        x1="${start.x}" y1="${start.y}" 
-        x2="${end.x}" y2="${end.y}"
-        stroke="${color}"
-      />
-    </svg>
+  const len=Math.sqrt(dx*dx+dy*dy);
+  const ang=Math.atan2(dy,dx)*(180/Math.PI);
+
+  const color=current==="X"?"#00f0ff":"#ff00cc";
+
+  winBeam.innerHTML=`
+    <div style="
+      position:absolute;
+      left:${s.x}px;
+      top:${s.y}px;
+      width:${len}px;
+      height:10px;
+      transform-origin:0 50%;
+      transform:rotate(${ang}deg);
+      background:linear-gradient(
+        to right,
+        transparent,
+        ${color}55 10%,
+        ${color} 50%,
+        ${color}55 90%,
+        transparent
+      );
+      filter:drop-shadow(0 0 10px ${color});
+      animation:beamSettle 1.2s ease-out forwards;
+    "></div>
   `;
-  winBeam.style.color = color;
-  winBeam.style.opacity = "1";
+  winBeam.style.opacity="1";
 }
 
 /* UI */
 function updateUI(text){
-  left.innerHTML = "";
-  right.innerHTML = "";
-  left.className = "side";
-  right.className = "side";
-  if(text === "DRAW"){
-    left.innerHTML = `<span class="draw">DRAW</span>`;
-    right.innerHTML = `<span class="draw">DRAW</span>`;
+  left.innerHTML="";
+  right.innerHTML="";
+  left.className="side";
+  right.className="side";
+
+  if(text==="DRAW"){
+    left.innerHTML=`<span class="draw">DRAW</span>`;
+    right.innerHTML=`<span class="draw">DRAW</span>`;
     return;
   }
-  const cleanText = text.replace("X","").replace("O","").trim();
-  const symbol = current === "X" ? "X" : "O";
-  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
-  const target = isLeft ? left : right;
-  target.innerHTML = `
-    <span class="symbol">${symbol}</span>
-    <span class="label">${cleanText}</span>
+
+  const clean=text.replace("X","").replace("O","").trim();
+  const sym=current;
+
+  const isLeft=(!swap&&text.includes("X"))||(swap&&text.includes("O"));
+  const t=isLeft?left:right;
+
+  t.innerHTML=`
+    <span class="symbol">${sym}</span>
+    <span class="label">${clean}</span>
   `;
-  target.classList.add("metal");
+  t.classList.add("metal");
 }
 
-/* GAME */
-board.onclick = e => {
-  const cell = e.target.closest(".cell");
-  if(!cell || gameOver) return;
-  const i = parseInt(cell.dataset.i);
-  if(boardState[i]) return;
+/* CLICK */
+board.onclick=e=>{
+  const cell=e.target.closest(".cell");
+  if(!cell||gameOver)return;
+  const i=cell.dataset.i;
+  if(boardState[i])return;
 
-  boardState[i] = current;
-  const m = document.createElement("div");
-  m.className = "mark " + current.toLowerCase();
-  m.textContent = current;
+  boardState[i]=current;
+
+  const m=document.createElement("div");
+  m.className="mark "+current.toLowerCase();
+  m.textContent=current;
   cell.appendChild(m);
 
-  playPlaceSound(current === "X");
+  playPlaceSound(current==="X");
 
-  const winCombo = checkWin();
-  if(winCombo){
-    gameOver = true;
+  const win=checkWin();
+  if(win){
+    gameOver=true;
     playSparkle();
-    drawWinBeam(winCombo);
-    updateUI(current + " WINS");
+    drawWinBeam(win);
+    updateUI(current+" WINS");
     return;
   }
 
-  if(boardState.every(x => x)){
-    gameOver = true;
+  if(boardState.every(x=>x)){
+    gameOver=true;
     updateUI("DRAW");
     return;
   }
 
-  current = current === "X" ? "O" : "X";
-  updateUI(current + " TURN");
+  current=current==="X"?"O":"X";
+  updateUI(current+" TURN");
 };
 
-const wins = [
-  [0,1,2],[3,4,5],[6,7,8],
-  [0,3,6],[1,4,7],[2,5,8],
-  [0,4,8],[2,4,6]
+/* WIN */
+const wins=[
+[0,1,2],[3,4,5],[6,7,8],
+[0,3,6],[1,4,7],[2,5,8],
+[0,4,8],[2,4,6]
 ];
+
 function checkWin(){
-  return wins.find(([a,b,c]) =>
-    boardState[a] &&
-    boardState[a] === boardState[b] &&
-    boardState[a] === boardState[c]
+  return wins.find(([a,b,c])=>
+    boardState[a]&&
+    boardState[a]===boardState[b]&&
+    boardState[a]===boardState[c]
   );
 }
 
 /* RESET */
-restartBtn.onclick = () => {
-  boardState = Array(9).fill(null);
-  current = "X";
-  gameOver = false;
-  swap = !swap;
-  
-  document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";
-  winBeam.style.opacity = "0";
-  
+restartBtn.onclick=()=>{
+  boardState=Array(9).fill(null);
+  current="X";
+  gameOver=false;
+  swap=!swap;
+
+  document.querySelectorAll(".cell").forEach(c=>c.innerHTML="");
+  winBeam.innerHTML="";
+  winBeam.style.opacity="0";
+
   updateUI("X TURN");
   playResetSound();
 };
 
 updateUI("X TURN");
 </script>
+
 </body>
 </html>
