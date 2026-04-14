@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -16,6 +16,7 @@ body{
   color:white;
   overflow:hidden;
 }
+
 /* ===== TITLE ===== */
 #title{
   font-size:77px;
@@ -32,6 +33,7 @@ body{
   0%{background-position:0%}
   100%{background-position:400%}
 }
+
 /* ===== LAYOUT ===== */
 #game{
   display:flex;
@@ -39,6 +41,7 @@ body{
   justify-content:center;
   gap:220px;
 }
+
 /* SIDE STATUS */
 .side{
   width:220px;
@@ -53,6 +56,7 @@ body{
   align-items: center;
   gap: 4px;
 }
+
 /* SYMBOL ABOVE TEXT */
 .side .symbol {
   font-size: 82px;
@@ -64,10 +68,12 @@ body{
     0 0 28px #d0f0ff,
     0 0 50px #ffffff;
 }
+
 /* TEXT UNDER SYMBOL */
 .side .label {
   display:block;
 }
+
 /* METAL TEXT */
 .metal{
   color:#fff;
@@ -76,6 +82,7 @@ body{
     0 0 25px #fff,
     0 0 50px #fff;
 }
+
 /* DRAW TEXT */
 .draw{
   color:#ff0033;
@@ -88,10 +95,16 @@ body{
     0 0 80px #ff0033;
   animation: drawPulse 3.2s ease-in-out infinite;
 }
+
 @keyframes drawPulse {
-  0%, 100% { opacity: 0.92; }
-  50% { opacity: 1; }
+  0%, 100% { 
+    opacity: 0.92; 
+  }
+  50% { 
+    opacity: 1; 
+  }
 }
+
 /* ===== BOARD ===== */
 #board{
   position:relative;
@@ -107,37 +120,7 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN BEAM OVERLAY */
-#winBeam{
-  position:absolute;
-  top:0; left:0; width:100%; height:100%;
-  pointer-events:none;
-  z-index:10;
-  opacity:0;
-  transition: opacity 0.4s ease-out;
-}
-#winBeam svg{
-  width:100%; height:100%;
-  filter: drop-shadow(0 0 25px currentColor);
-}
-#winBeam line{
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 18;
-  filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
-  animation: beamSettle 1.2s ease-out forwards;
-}
-@keyframes beamSettle{
-  0%{
-    stroke-width: 32;
-    opacity: 0.95;
-  }
-  100%{
-    stroke-width: 11;
-    opacity: 1;
-  }
-}
+
 /* FOG */
 #board::before{
   content:"";
@@ -159,6 +142,7 @@ body{
   0%,100%{ opacity:0.4; transform:scaleX(1); }
   50%{ opacity:1; transform:scaleX(1.35); }
 }
+
 /* CELLS */
 .cell{
   width:86px;
@@ -173,6 +157,7 @@ body{
     0 0 15px #000,
     inset 0 0 20px #ffffff22;
 }
+
 /* MARKS */
 .mark{
   font-size:64px;
@@ -197,6 +182,7 @@ body{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-10px)}
 }
+
 /* RESTART BUTTON */
 #restart{
   margin-top:40px;
@@ -220,6 +206,7 @@ body{
   position: relative;
   overflow: hidden;
 }
+
 #restart::before {
   content: '';
   position: absolute;
@@ -230,21 +217,22 @@ body{
   filter: blur(8px);
   opacity: 0.85;
 }
+
 #restart:active{
   transform:scale(0.93);
 }
 </style>
 </head>
 <body>
+
 <div id="title">X/O CLASH</div>
+
 <div id="game">
   <div id="left" class="side"></div>
-  <div id="board">
-    <!-- Win Beam Overlay -->
-    <div id="winBeam"></div>
-  </div>
+  <div id="board"></div>
   <div id="right" class="side"></div>
 </div>
+
 <button id="restart">RESTART</button>
 
 <script>
@@ -257,31 +245,38 @@ const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
-const winBeam = document.getElementById("winBeam");
 
 /* ===== SOUND SYSTEM (RESTORED) ===== */
 let audioCtx;
+
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
+
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
   gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
   oscillator.connect(gain);
   gain.connect(audioCtx.destination);
+
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
+
 function playPlaceSound(isX) {
   playSound(isX ? 720 : 540, 0.09, 'triangle');
 }
+
 function playSparkle() {
   playSound(880, 0.08, 'sine');
   setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
   setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
 }
+
 function playResetSound() {
   playSound(420, 0.25, 'sine');
 }
@@ -294,59 +289,30 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* CELL CENTER POSITIONS (relative to board) */
-function getCellCenter(index) {
-  const cell = document.querySelectorAll(".cell")[index];
-  const rect = cell.getBoundingClientRect();
-  const boardRect = board.getBoundingClientRect();
-  return {
-    x: (rect.left + rect.width / 2) - boardRect.left,
-    y: (rect.top + rect.height / 2) - boardRect.top
-  };
-}
-
-/* DRAW WIN BEAM */
-function drawWinBeam(winCombo) {
-  if (!winCombo) return;
-  
-  const [a, b, c] = winCombo;
-  const start = getCellCenter(a);
-  const end = getCellCenter(c);   // middle cell not needed for line
-
-  const color = current === "X" ? "#00f0ff" : "#ff00cc";
-
-  winBeam.innerHTML = `
-    <svg viewBox="0 0 ${board.offsetWidth} ${board.offsetHeight}" xmlns="http://www.w3.org/2000/svg">
-      <line 
-        x1="${start.x}" y1="${start.y}" 
-        x2="${end.x}" y2="${end.y}"
-        stroke="${color}"
-      />
-    </svg>
-  `;
-  winBeam.style.color = color;
-  winBeam.style.opacity = "1";
-}
-
 /* UI UPDATE */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
   left.className = "side";
   right.className = "side";
+
   if(text === "DRAW"){
     left.innerHTML = `<span class="draw">DRAW</span>`;
     right.innerHTML = `<span class="draw">DRAW</span>`;
     return;
   }
+
   const cleanText = text.replace("X","").replace("O","").trim();
   const symbol = current === "X" ? "X" : "O";
+
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
   const target = isLeft ? left : right;
+
   target.innerHTML = `
     <span class="symbol">${symbol}</span>
     <span class="label">${cleanText}</span>
   `;
+
   target.classList.add("metal");
 }
 
@@ -354,10 +320,12 @@ function updateUI(text){
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
-  const i = parseInt(cell.dataset.i);
+
+  const i = cell.dataset.i;
   if(boardState[i]) return;
 
   boardState[i] = current;
+
   const m = document.createElement("div");
   m.className = "mark " + current.toLowerCase();
   m.textContent = current;
@@ -365,11 +333,11 @@ board.onclick = e => {
 
   playPlaceSound(current === "X");
 
-  const winCombo = checkWin();
-  if(winCombo){
+  const win = checkWin();
+
+  if(win){
     gameOver = true;
     playSparkle();
-    drawWinBeam(winCombo);           // ← Win Beam
     updateUI(current + " WINS");
     return;
   }
@@ -384,17 +352,18 @@ board.onclick = e => {
   updateUI(current + " TURN");
 };
 
-/* WIN CHECK - returns the winning combination array */
+/* WIN CHECK */
 const wins = [
-  [0,1,2],[3,4,5],[6,7,8],   // horizontal
-  [0,3,6],[1,4,7],[2,5,8],   // vertical
-  [0,4,8],[2,4,6]            // diagonal
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
 ];
+
 function checkWin(){
   return wins.find(([a,b,c]) =>
     boardState[a] &&
-    boardState[a] === boardState[b] &&
-    boardState[a] === boardState[c]
+    boardState[a]===boardState[b] &&
+    boardState[a]===boardState[c]
   );
 }
 
@@ -404,16 +373,15 @@ restartBtn.onclick = () => {
   current = "X";
   gameOver = false;
   swap = !swap;
-  
+
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";           // Clear beam
-  winBeam.style.opacity = "0";
-  
+
   updateUI("X TURN");
   playResetSound();
 };
 
 updateUI("X TURN");
 </script>
+
 </body>
 </html>
