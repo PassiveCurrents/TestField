@@ -57,12 +57,16 @@ body{
   gap: 6px;
 }
 
-/* PLAYER SYMBOL (colored exactly like the mark) */
+/* PLAYER SYMBOL - SAME SILVER METALLIC GLOW AS THE TEXT */
 .side .symbol {
   font-size: 78px;
   font-weight: 900;
   line-height: 1;
-  text-shadow: 0 0 20px currentColor;
+  color: #ffffff;
+  text-shadow:
+    0 0 12px #ffffff,
+    0 0 25px #d0f0ff,
+    0 0 45px #ffffff;
 }
 
 /* METAL TEXT */
@@ -285,7 +289,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* UI UPDATE - SYMBOL ABOVE TEXT (clean & correct color) */
+/* UI UPDATE - SYMBOL ABOVE TEXT (silver metallic glow) */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -298,17 +302,16 @@ function updateUI(text){
     return;
   }
 
-  // Determine which side gets the message
-  const isXMessage = text.includes("X");
-  const targetSide = (!swap && isXMessage) || (swap && !isXMessage) ? left : right;
-  const symbol = isXMessage ? "X" : "O";
-  const symbolColor = isXMessage ? "#00f0ff" : "#ff00cc";
+  const symbol = current === "X" ? "X" : "O";
 
-  targetSide.innerHTML = `
-    <span class="symbol" style="color:${symbolColor}">${symbol}</span>
+  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
+  const target = isLeft ? left : right;
+
+  target.innerHTML = `
+    <span class="symbol">${symbol}</span>
     <span>${text}</span>
   `;
-  targetSide.classList.add("metal");
+  target.classList.add("metal");
 }
 
 /* CLICK */
