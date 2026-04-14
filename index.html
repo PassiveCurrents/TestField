@@ -107,7 +107,7 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN BEAM OVERLAY - IMPROVED ALIGNMENT & FULL LENGTH */
+/* WIN BEAM OVERLAY */
 #winBeam{
   position:absolute;
   top:-24px;
@@ -125,17 +125,20 @@ body{
   filter: drop-shadow(0 0 25px currentColor);
 }
 #winBeam line{
-  stroke: currentColor;
+  stroke: url(#beamGradient);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 18;
   filter: brightness(1.4) drop-shadow(0 0 12px currentColor);
-  animation: beamSettle 1.2s ease-out forwards;
+  animation: beamBlastSettle 1.35s ease-out forwards;
 }
-@keyframes beamSettle{
+@keyframes beamBlastSettle{
   0%{
-    stroke-width: 32;
-    opacity: 0.95;
+    stroke-width: 34;
+    opacity: 0.9;
+  }
+  30%{
+    stroke-width: 28;
+    opacity: 1;
   }
   100%{
     stroke-width: 11;
@@ -304,7 +307,7 @@ function getCellCenter(index) {
     y: (rect.top + rect.height / 2) - boardRect.top + 24
   };
 }
-/* DRAW WIN BEAM - FULL LENGTH + PERFECT CENTER ALIGNMENT + TAPERED SPIKY ENDS */
+/* DRAW WIN BEAM - UPGRADED: thicker blast → settle thinner + tapered ends */
 function drawWinBeam(winCombo) {
   if (!winCombo) return;
  
@@ -318,8 +321,8 @@ function drawWinBeam(winCombo) {
       <defs>
         <linearGradient id="beamGradient" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
-          <stop offset="15%" stop-color="${color}" stop-opacity="1"/>
-          <stop offset="85%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="12%" stop-color="${color}" stop-opacity="1"/>
+          <stop offset="88%" stop-color="${color}" stop-opacity="1"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
         </linearGradient>
       </defs>
@@ -406,7 +409,7 @@ restartBtn.onclick = () => {
   swap = !swap;
  
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";
+  winBeam.innerHTML = "";           // Clear beam completely
   winBeam.style.opacity = "0";
  
   updateUI("X TURN");
