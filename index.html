@@ -42,7 +42,7 @@ body{
   gap:220px;
 }
 
-/* SIDE STATUS */
+/* SIDE STATUS - PLAYER SYMBOL ABOVE TEXT */
 .side{
   width:220px;
   text-align:center;
@@ -51,6 +51,18 @@ body{
   letter-spacing:2px;
   white-space:nowrap;
   margin-left: -68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* PLAYER SYMBOL (X or O) */
+.side .symbol {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 20px currentColor;
 }
 
 /* METAL TEXT */
@@ -235,40 +247,32 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-let audioCtx; // Web Audio Context
+let audioCtx;
 
-// Simple sound function
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  
   const oscillator = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
   gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-  
   oscillator.connect(gain);
   gain.connect(audioCtx.destination);
-  
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
 
-// Sparkle / Win sound
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
+
 function playSparkle() {
   playSound(880, 0.08, 'sine');
   setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
   setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
 }
 
-// Placement sound (different tone for X and O)
-function playPlaceSound(isX) {
-  playSound(isX ? 720 : 540, 0.09, 'triangle');
-}
-
-// Reset sound
 function playResetSound() {
   playSound(420, 0.25, 'sine');
 }
@@ -281,26 +285,32 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* UI UPDATE */
+/* UI UPDATE - PLAYER SYMBOL ABOVE TEXT */
 function updateUI(text){
+  left.innerHTML = "";
+  right.innerHTML = "";
   left.className = "side";
   right.className = "side";
+
   if(text === "DRAW"){
-    left.textContent = "DRAW";
-    right.textContent = "DRAW";
-    left.classList.add("draw");
-    right.classList.add("draw");
+    left.innerHTML = `<span class="draw">DRAW</span>`;
+    right.innerHTML = `<span class="draw">DRAW</span>`;
     return;
   }
-  if(!swap){
-    left.textContent = text.includes("X") ? text : "";
-    right.textContent = text.includes("O") ? text : "";
-  } else {
-    left.textContent = text.includes("O") ? text : "";
-    right.textContent = text.includes("X") ? text : "";
+
+  const symbol = current === "X" ? "X" : "O";
+  const symbolColor = current === "X" ? "#00f0ff" : "#ff00cc";
+
+  if(text.includes("WINS") || text.includes("TURN")){
+    const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
+    const target = isLeft ? left : right;
+
+    target.innerHTML = `
+      <span class="symbol" style="color:${symbolColor}">${symbol}</span>
+      <span>${text}</span>
+    `;
+    target.classList.add("metal");
   }
-  if(left.textContent) left.classList.add("metal");
-  if(right.textContent) right.classList.add("metal");
 }
 
 /* CLICK */
@@ -316,7 +326,6 @@ board.onclick = e => {
   m.textContent = current;
   cell.appendChild(m);
 
-  // Sound + visual feedback
   playPlaceSound(current === "X");
 
   const win = checkWin();
