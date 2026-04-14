@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -107,7 +107,7 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN BEAM OVERLAY */
+/* WIN BEAM OVERLAY - IMPROVED ALIGNMENT & FULL LENGTH */
 #winBeam{
   position:absolute;
   top:-24px; 
@@ -125,6 +125,7 @@ body{
   filter: drop-shadow(0 0 25px currentColor);
 }
 #winBeam line{
+  stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 18;
@@ -239,17 +240,15 @@ body{
 </style>
 </head>
 <body>
-
 <div id="title">X/O CLASH</div>
-
 <div id="game">
   <div id="left" class="side"></div>
   <div id="board">
+    <!-- Win Beam Overlay -->
     <div id="winBeam"></div>
   </div>
   <div id="right" class="side"></div>
 </div>
-
 <button id="restart">RESTART</button>
 
 <script>
@@ -299,68 +298,63 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* CELL CENTER POSITIONS */
+/* CELL CENTER POSITIONS (relative to board) */
 function getCellCenter(index) {
   const cell = document.querySelectorAll(".cell")[index];
   const rect = cell.getBoundingClientRect();
   const boardRect = board.getBoundingClientRect();
   return {
-    x: (rect.left + rect.width / 2) - boardRect.left + 24,
+    x: (rect.left + rect.width / 2) - boardRect.left + 24,   // offset for extended beam
     y: (rect.top + rect.height / 2) - boardRect.top + 24
   };
 }
 
-/* 🔥 UPDATED BEAM ONLY */
+/* DRAW WIN BEAM - FULL LENGTH + PERFECT CENTER ALIGNMENT */
 function drawWinBeam(winCombo) {
   if (!winCombo) return;
   
-  const [a, , c] = winCombo;
+  const [a, b, c] = winCombo;
   const start = getCellCenter(a);
   const end = getCellCenter(c);
 
   const color = current === "X" ? "#00f0ff" : "#ff00cc";
 
   winBeam.innerHTML = `
-    <svg viewBox="0 0 ${board.offsetWidth + 48} ${board.offsetHeight + 48}">
-      <defs>
-        <linearGradient id="beamGrad" gradientUnits="userSpaceOnUse"
-          x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}">
-          
-          <stop offset="0%" stop-color="${color}" stop-opacity="0"/>
-          <stop offset="15%" stop-color="${color}" stop-opacity="1"/>
-          <stop offset="85%" stop-color="${color}" stop-opacity="1"/>
-          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-          
-        </linearGradient>
-      </defs>
-
+    <svg viewBox="0 0 ${board.offsetWidth + 48} ${board.offsetHeight + 48}" xmlns="http://www.w3.org/2000/svg">
       <line 
         x1="${start.x}" y1="${start.y}" 
         x2="${end.x}" y2="${end.y}"
-        stroke="url(#beamGrad)"
+        stroke="${color}"
       />
     </svg>
   `;
-
   winBeam.style.color = color;
   winBeam.style.opacity = "1";
 }
 
-/* (rest of your code untouched) */
-const wins = [
-  [0,1,2],[3,4,5],[6,7,8],
-  [0,3,6],[1,4,7],[2,5,8],
-  [0,4,8],[2,4,6]
-];
-
-function checkWin(){
-  return wins.find(([a,b,c]) =>
-    boardState[a] &&
-    boardState[a] === boardState[b] &&
-    boardState[a] === boardState[c]
-  );
+/* UI UPDATE */
+function updateUI(text){
+  left.innerHTML = "";
+  right.innerHTML = "";
+  left.className = "side";
+  right.className = "side";
+  if(text === "DRAW"){
+    left.innerHTML = `<span class="draw">DRAW</span>`;
+    right.innerHTML = `<span class="draw">DRAW</span>`;
+    return;
+  }
+  const cleanText = text.replace("X","").replace("O","").trim();
+  const symbol = current === "X" ? "X" : "O";
+  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
+  const target = isLeft ? left : right;
+  target.innerHTML = `
+    <span class="symbol">${symbol}</span>
+    <span class="label">${cleanText}</span>
+  `;
+  target.classList.add("metal");
 }
 
+/* CLICK */
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
@@ -368,7 +362,6 @@ board.onclick = e => {
   if(boardState[i]) return;
 
   boardState[i] = current;
-
   const m = document.createElement("div");
   m.className = "mark " + current.toLowerCase();
   m.textContent = current;
@@ -380,25 +373,51 @@ board.onclick = e => {
   if(winCombo){
     gameOver = true;
     playSparkle();
-    drawWinBeam(winCombo);
+    drawWinBeam(winCombo);           // ← Win Beam
+    updateUI(current + " WINS");
+    return;
+  }
+
+  if(boardState.every(x => x)){
+    gameOver = true;
+    updateUI("DRAW");
     return;
   }
 
   current = current === "X" ? "O" : "X";
+  updateUI(current + " TURN");
 };
 
+/* WIN CHECK - returns the winning combination array */
+const wins = [
+  [0,1,2],[3,4,5],[6,7,8],   // horizontal
+  [0,3,6],[1,4,7],[2,5,8],   // vertical
+  [0,4,8],[2,4,6]            // diagonal
+];
+function checkWin(){
+  return wins.find(([a,b,c]) =>
+    boardState[a] &&
+    boardState[a] === boardState[b] &&
+    boardState[a] === boardState[c]
+  );
+}
+
+/* RESET */
 restartBtn.onclick = () => {
   boardState = Array(9).fill(null);
   current = "X";
   gameOver = false;
   swap = !swap;
-
+  
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";
+  winBeam.innerHTML = "";           // Clear beam
   winBeam.style.opacity = "0";
-
+  
+  updateUI("X TURN");
   playResetSound();
 };
+
+updateUI("X TURN");
 </script>
 </body>
 </html>
