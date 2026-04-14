@@ -107,18 +107,18 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN BEAM - CLEAN 1:1 ALIGNMENT */
+/* WIN BEAM OVERLAY */
 #winBeam{
   position:absolute;
-  inset:0;
+  top:0; left:0; width:100%; height:100%;
   pointer-events:none;
   z-index:10;
   opacity:0;
   transition: opacity 0.4s ease-out;
 }
 #winBeam svg{
-  width:100%;
-  height:100%;
+  width:100%; height:100%;
+  filter: drop-shadow(0 0 25px currentColor);
 }
 #winBeam line{
   stroke: currentColor;
@@ -240,6 +240,7 @@ body{
 <div id="game">
   <div id="left" class="side"></div>
   <div id="board">
+    <!-- Win Beam Overlay -->
     <div id="winBeam"></div>
   </div>
   <div id="right" class="side"></div>
@@ -247,18 +248,18 @@ body{
 <button id="restart">RESTART</button>
 
 <script>
-/* ===== ORIGINAL CODE UNTOUCHED ===== */
 let boardState = Array(9).fill(null);
 let current = "X";
 let gameOver = false;
 let swap = false;
+
 const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 const winBeam = document.getElementById("winBeam");
 
-/* SOUND SYSTEM (unchanged) */
+/* ===== SOUND SYSTEM (RESTORED) ===== */
 let audioCtx;
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -273,13 +274,17 @@ function playSound(freq, duration = 0.1, type = 'sine') {
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
-function playPlaceSound(isX) { playSound(isX ? 720 : 540, 0.09, 'triangle'); }
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
 function playSparkle() {
   playSound(880, 0.08, 'sine');
   setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
   setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
 }
-function playResetSound() { playSound(420, 0.25, 'sine'); }
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
+}
 
 /* CREATE GRID */
 for(let i = 0; i < 9; i++){
@@ -289,41 +294,33 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* TRUE BOARD-RELATIVE CENTERS + SUBPIXEL + STROKE CENTER COMPENSATION */
+/* CELL CENTER POSITIONS (relative to board) */
 function getCellCenter(index) {
   const cell = document.querySelectorAll(".cell")[index];
   const rect = cell.getBoundingClientRect();
   const boardRect = board.getBoundingClientRect();
-  
-  let x = (rect.left + rect.width / 2) - boardRect.left;
-  let y = (rect.top + rect.height / 2) - boardRect.top - 5;   // half stroke visual center micro-adjust
-  
-  // Snap to device pixels to eliminate subpixel drift
-  const dpr = window.devicePixelRatio || 1;
-  x = Math.round(x * dpr) / dpr;
-  y = Math.round(y * dpr) / dpr;
-  
-  return { x, y };
+  return {
+    x: (rect.left + rect.width / 2) - boardRect.left,
+    y: (rect.top + rect.height / 2) - boardRect.top
+  };
 }
 
-/* PERFECT WIN BEAM - 1:1 alignment, full length, dead center */
+/* DRAW WIN BEAM */
 function drawWinBeam(winCombo) {
   if (!winCombo) return;
   
-  const [a, , c] = winCombo;
+  const [a, b, c] = winCombo;
   const start = getCellCenter(a);
-  const end = getCellCenter(c);
+  const end = getCellCenter(c);   // middle cell not needed for line
 
   const color = current === "X" ? "#00f0ff" : "#ff00cc";
 
   winBeam.innerHTML = `
-    <svg viewBox="0 0 ${board.clientWidth} ${board.clientHeight}" width="100%" height="100%">
+    <svg viewBox="0 0 ${board.offsetWidth} ${board.offsetHeight}" xmlns="http://www.w3.org/2000/svg">
       <line 
-        x1="${start.x}" 
-        y1="${start.y}" 
-        x2="${end.x}" 
-        y2="${end.y}" 
-        stroke="${color}" 
+        x1="${start.x}" y1="${start.y}" 
+        x2="${end.x}" y2="${end.y}"
+        stroke="${color}"
       />
     </svg>
   `;
@@ -372,7 +369,7 @@ board.onclick = e => {
   if(winCombo){
     gameOver = true;
     playSparkle();
-    drawWinBeam(winCombo);
+    drawWinBeam(winCombo);           // ← Win Beam
     updateUI(current + " WINS");
     return;
   }
@@ -387,11 +384,11 @@ board.onclick = e => {
   updateUI(current + " TURN");
 };
 
-/* WIN CHECK */
+/* WIN CHECK - returns the winning combination array */
 const wins = [
-  [0,1,2],[3,4,5],[6,7,8],
-  [0,3,6],[1,4,7],[2,5,8],
-  [0,4,8],[2,4,6]
+  [0,1,2],[3,4,5],[6,7,8],   // horizontal
+  [0,3,6],[1,4,7],[2,5,8],   // vertical
+  [0,4,8],[2,4,6]            // diagonal
 ];
 function checkWin(){
   return wins.find(([a,b,c]) =>
@@ -407,9 +404,11 @@ restartBtn.onclick = () => {
   current = "X";
   gameOver = false;
   swap = !swap;
+  
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  winBeam.innerHTML = "";
+  winBeam.innerHTML = "";           // Clear beam
   winBeam.style.opacity = "0";
+  
   updateUI("X TURN");
   playResetSound();
 };
