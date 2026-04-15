@@ -121,13 +121,13 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
-/* WIN CANVAS */
+/* WIN CANVAS - FIXED Z-INDEX */
 #winCanvas{
   position:absolute;
   top:0;
   left:0;
   pointer-events:none;
-  z-index:5;
+  z-index:10; /* INCREASED FROM 5 */
 }
 
 /* FOG */
@@ -255,7 +255,7 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-/* ===== ADD CANVAS ===== */
+/* ===== CANVAS ===== */
 const canvas = document.createElement("canvas");
 canvas.id = "winCanvas";
 board.appendChild(canvas);
@@ -311,7 +311,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* ===== UPGRADED WINNING BEAM ===== */
+/* ===== FIXED: ULTRA-VISIBLE WINNING BEAMS ===== */
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
 
@@ -330,43 +330,57 @@ function drawWinLine(combo, player){
   const color = player === "X" ? "#00f0ff" : "#ff00cc";
   
   let progress = 0;
-  const animationDuration = 1200; // 1.2 seconds
+  const animationDuration = 1500; // 1.5 seconds
   const startTime = performance.now();
 
   function animateBeam(currentTime) {
-    progress = Math.min((currentTime - startTime) / animationDuration, 1);
+    const elapsed = currentTime - startTime;
+    progress = Math.min(elapsed / animationDuration, 1);
     
+    // FULL CLEAR
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // THICK → THIN animation (starts at 36px, settles to 14px)
-    const thickness = 36 - (progress * 22);
-    // BRIGHT → DIM glow (starts at 70px blur, settles to 20px)
-    const glowIntensity = 70 - (progress * 50);
+    // MULTI-LAYER BEAM FOR MAX VISIBILITY
+    const layers = [
+      // Ultra-thick outer glow layer
+      {width: 50 - (progress * 30), blur: 80 - (progress * 50), opacity: 0.9},
+      // Thick main beam
+      {width: 32 - (progress * 20), blur: 45 - (progress * 25), opacity: 1.0},
+      // Medium inner beam  
+      {width: 20 - (progress * 12), blur: 25 - (progress * 15), opacity: 0.95},
+      // Thin core beam (settles here)
+      {width: 14 - (progress * 4), blur: 18 - (progress * 8), opacity: 1.0}
+    ];
 
-    ctx.lineWidth = Math.max(thickness, 14);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    layers.forEach((layer, index) => {
+      ctx.globalAlpha = layer.opacity;
+      ctx.lineWidth = Math.max(layer.width, 8);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
 
-    // Main beam with gradient-like effect
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = Math.max(glowIntensity, 20);
+      // BRIGHTER COLORS FOR VISIBILITY
+      const brightColor = player === "X" ? 
+        `rgba(0, 255, 255, ${layer.opacity})` : 
+        `rgba(255, 0, 220, ${layer.opacity})`;
+      
+      ctx.strokeStyle = brightColor;
+      ctx.shadowColor = brightColor;
+      ctx.shadowBlur = Math.max(layer.blur, 12);
 
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    });
 
-    // Inner core glow for extra effect
-    ctx.shadowBlur = Math.max(glowIntensity * 0.4, 8);
-    ctx.lineWidth = Math.max(thickness * 0.4, 6);
-    ctx.stroke();
+    ctx.globalAlpha = 1.0; // Reset alpha
 
     if (progress < 1) {
       requestAnimationFrame(animateBeam);
     }
   }
 
+  // START THE BEAM EXPLOSION
   requestAnimationFrame(animateBeam);
 }
 
@@ -457,7 +471,7 @@ restartBtn.onclick = () => {
   swap = !swap;
 
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0,0,canvas.width,canvas.height); // CLEAR BEAM
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   updateUI("X TURN");
   playResetSound();
