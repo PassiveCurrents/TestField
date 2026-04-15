@@ -97,12 +97,8 @@ body{
 }
 
 @keyframes drawPulse {
-  0%, 100% { 
-    opacity: 0.92; 
-  }
-  50% { 
-    opacity: 1; 
-  }
+  0%, 100% { opacity: 0.92; }
+  50% { opacity: 1; }
 }
 
 /* ===== BOARD ===== */
@@ -121,7 +117,7 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
-/* NEW: WIN CANVAS */
+/* WIN CANVAS */
 #winCanvas{
   position:absolute;
   top:0;
@@ -255,7 +251,7 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-/* ===== ADD CANVAS ===== */
+/* CANVAS */
 const canvas = document.createElement("canvas");
 canvas.id = "winCanvas";
 board.appendChild(canvas);
@@ -268,9 +264,8 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-/* ===== SOUND SYSTEM (RESTORED) ===== */
+/* SOUND */
 let audioCtx;
-
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audioCtx.createOscillator();
@@ -288,22 +283,15 @@ function playSound(freq, duration = 0.1, type = 'sine') {
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
-
-function playPlaceSound(isX) {
-  playSound(isX ? 720 : 540, 0.09, 'triangle');
-}
-
+function playPlaceSound(isX) { playSound(isX ? 720 : 540, 0.09, 'triangle'); }
 function playSparkle() {
-  playSound(880, 0.08, 'sine');
-  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
-  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+  playSound(880, 0.08);
+  setTimeout(() => playSound(1100, 0.08), 40);
+  setTimeout(() => playSound(1320, 0.12), 90);
 }
+function playResetSound() { playSound(420, 0.25); }
 
-function playResetSound() {
-  playSound(420, 0.25, 'sine');
-}
-
-/* CREATE GRID */
+/* GRID */
 for(let i = 0; i < 9; i++){
   const c = document.createElement("div");
   c.className = "cell";
@@ -311,7 +299,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* DRAW WIN LINE */
+/* ===== NEW: ANIMATED BEAM ===== */
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
 
@@ -327,24 +315,40 @@ function drawWinLine(combo, player){
   const start = getCenter(cells[combo[0]]);
   const end = getCenter(cells[combo[2]]);
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx.lineWidth = 18;
-  ctx.lineCap = "round";
-
   const color = player === "X" ? "#00f0ff" : "#ff00cc";
 
-  ctx.strokeStyle = color;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 35;
+  let progress = 0;
 
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(end.x, end.y);
-  ctx.stroke();
+  function animate(){
+    progress += 0.06;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // THICK → THIN
+    const thickness = 28 - (progress * 16);
+    const glow = 60 - (progress * 35);
+
+    ctx.lineWidth = Math.max(thickness, 10);
+    ctx.lineCap = "round";
+
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = Math.max(glow, 15);
+
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+
+    if(progress < 1){
+      requestAnimationFrame(animate);
+    }
+  }
+
+  animate();
 }
 
-/* UI UPDATE */
+/* UI */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -358,7 +362,7 @@ function updateUI(text){
   }
 
   const cleanText = text.replace("X","").replace("O","").trim();
-  const symbol = current === "X" ? "X" : "O";
+  const symbol = current;
 
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
   const target = isLeft ? left : right;
@@ -367,7 +371,6 @@ function updateUI(text){
     <span class="symbol">${symbol}</span>
     <span class="label">${cleanText}</span>
   `;
-
   target.classList.add("metal");
 }
 
@@ -393,7 +396,7 @@ board.onclick = e => {
   if(win){
     gameOver = true;
     playSparkle();
-    drawWinLine(win, current); // NEW
+    drawWinLine(win, current);
     updateUI(current + " WINS");
     return;
   }
@@ -431,7 +434,7 @@ restartBtn.onclick = () => {
   swap = !swap;
 
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0,0,canvas.width,canvas.height); // CLEAR LINE
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   updateUI("X TURN");
   playResetSound();
