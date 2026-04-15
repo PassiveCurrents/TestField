@@ -16,6 +16,7 @@ body{
   color:white;
   overflow:hidden;
 }
+
 /* ===== TITLE ===== */
 #title{
   font-size:77px;
@@ -32,6 +33,7 @@ body{
   0%{background-position:0%}
   100%{background-position:400%}
 }
+
 /* ===== LAYOUT ===== */
 #game{
   display:flex;
@@ -39,7 +41,8 @@ body{
   justify-content:center;
   gap:220px;
 }
-/* SIDE STATUS */
+
+/* SIDE STATUS - SYMBOL ABOVE TEXT */
 .side{
   width:220px;
   text-align:center;
@@ -51,23 +54,21 @@ body{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
-/* SYMBOL ABOVE TEXT */
+
+/* PLAYER SYMBOL - SAME SILVER METALLIC GLOW AS THE TEXT */
 .side .symbol {
-  font-size: 82px;
+  font-size: 78px;
   font-weight: 900;
   line-height: 1;
   color: #ffffff;
   text-shadow:
     0 0 12px #ffffff,
-    0 0 28px #d0f0ff,
-    0 0 50px #ffffff;
+    0 0 25px #d0f0ff,
+    0 0 45px #ffffff;
 }
-/* TEXT UNDER SYMBOL */
-.side .label {
-  display:block;
-}
+
 /* METAL TEXT */
 .metal{
   color:#fff;
@@ -76,7 +77,8 @@ body{
     0 0 25px #fff,
     0 0 50px #fff;
 }
-/* DRAW TEXT */
+
+/* DRAW TEXT WITH SUBTLE PULSE */
 .draw{
   color:#ff0033;
   font-size:90px;
@@ -88,10 +90,28 @@ body{
     0 0 80px #ff0033;
   animation: drawPulse 3.2s ease-in-out infinite;
 }
+
 @keyframes drawPulse {
-  0%, 100% { opacity: 0.92; }
-  50% { opacity: 1; }
+  0%, 100% { 
+    opacity: 0.92; 
+    text-shadow:
+      0 0 10px #ffffff,
+      0 0 25px #ffffff,
+      0 0 20px #ff0033,
+      0 0 40px #ff0033,
+      0 0 80px #ff0033;
+  }
+  50% { 
+    opacity: 1; 
+    text-shadow:
+      0 0 15px #ffffff,
+      0 0 35px #ffffff,
+      0 0 30px #ff0033,
+      0 0 55px #ff0033,
+      0 0 100px #ff0033;
+  }
 }
+
 /* ===== BOARD ===== */
 #board{
   position:relative;
@@ -107,18 +127,8 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN BEAM OVERLAY */
-#winBeam{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  pointer-events:none;
-  z-index:10;
-  opacity:0;
-}
-/* FOG */
+
+/* SIDE GLOW / FOG */
 #board::before{
   content:"";
   position:absolute;
@@ -139,6 +149,7 @@ body{
   0%,100%{ opacity:0.4; transform:scaleX(1); }
   50%{ opacity:1; transform:scaleX(1.35); }
 }
+
 /* CELLS */
 .cell{
   width:86px;
@@ -153,6 +164,7 @@ body{
     0 0 15px #000,
     inset 0 0 20px #ffffff22;
 }
+
 /* MARKS */
 .mark{
   font-size:64px;
@@ -177,6 +189,7 @@ body{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-10px)}
 }
+
 /* RESTART BUTTON */
 #restart{
   margin-top:40px;
@@ -200,6 +213,8 @@ body{
   position: relative;
   overflow: hidden;
 }
+
+/* Gentle white glowing coat */
 #restart::before {
   content: '';
   position: absolute;
@@ -210,25 +225,19 @@ body{
   filter: blur(8px);
   opacity: 0.85;
 }
+
 #restart:active{
   transform:scale(0.93);
 }
 </style>
 </head>
 <body>
-
 <div id="title">X/O CLASH</div>
-
 <div id="game">
   <div id="left" class="side"></div>
-
-  <div id="board">
-    <div id="winBeam"></div>
-  </div>
-
+  <div id="board"></div>
   <div id="right" class="side"></div>
 </div>
-
 <button id="restart">RESTART</button>
 
 <script>
@@ -241,178 +250,126 @@ const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
-const winBeam = document.getElementById("winBeam");
 
-/* SOUND */
 let audioCtx;
+
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = type;
-  o.frequency.value = freq;
-  g.gain.setValueAtTime(0.25, audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start(); o.stop(audioCtx.currentTime + duration);
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration);
 }
-function playPlaceSound(isX){ playSound(isX ? 720 : 540, 0.09, 'triangle'); }
-function playSparkle(){
-  playSound(880,0.08); setTimeout(()=>playSound(1100,0.08),40);
-  setTimeout(()=>playSound(1320,0.12),90);
+
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
 }
-function playResetSound(){ playSound(420,0.25); }
+
+function playSparkle() {
+  playSound(880, 0.08, 'sine');
+  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
+  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+}
+
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
+}
 
 /* CREATE GRID */
-for(let i=0;i<9;i++){
-  const c=document.createElement("div");
-  c.className="cell";
-  c.dataset.i=i;
+for(let i = 0; i < 9; i++){
+  const c = document.createElement("div");
+  c.className = "cell";
+  c.dataset.i = i;
   board.appendChild(c);
 }
 
-/* ✅ FIXED CENTER CALC (NO OFFSET) */
-function getCellCenter(i){
-  const cell=document.querySelectorAll(".cell")[i];
-  const r=cell.getBoundingClientRect();
-  const br=board.getBoundingClientRect();
-  return {
-    x:(r.left+r.width/2)-br.left,
-    y:(r.top+r.height/2)-br.top
-  };
-}
-
-/* ✅ FIXED FULL-LENGTH BEAM */
-function drawWinBeam(combo){
-  const [a,,c]=combo;
-  const s=getCellCenter(a);
-  const e=getCellCenter(c);
-
-  const dx=e.x-s.x;
-  const dy=e.y-s.y;
-
-  const len=Math.sqrt(dx*dx+dy*dy);
-  const ang=Math.atan2(dy,dx)*(180/Math.PI);
-
-  const color=current==="X"?"#00f0ff":"#ff00cc";
-
-  winBeam.innerHTML=`
-    <div style="
-      position:absolute;
-      left:${s.x}px;
-      top:${s.y}px;
-      width:${len}px;
-      height:10px;
-      transform-origin:0 50%;
-      transform:rotate(${ang}deg);
-      background:linear-gradient(
-        to right,
-        transparent,
-        ${color}55 10%,
-        ${color} 50%,
-        ${color}55 90%,
-        transparent
-      );
-      filter:drop-shadow(0 0 10px ${color});
-      animation:beamSettle 1.2s ease-out forwards;
-    "></div>
-  `;
-  winBeam.style.opacity="1";
-}
-
-/* UI */
+/* UI UPDATE - SYMBOL ABOVE TEXT (silver metallic glow) */
 function updateUI(text){
-  left.innerHTML="";
-  right.innerHTML="";
-  left.className="side";
-  right.className="side";
+  left.innerHTML = "";
+  right.innerHTML = "";
+  left.className = "side";
+  right.className = "side";
 
-  if(text==="DRAW"){
-    left.innerHTML=`<span class="draw">DRAW</span>`;
-    right.innerHTML=`<span class="draw">DRAW</span>`;
+  if(text === "DRAW"){
+    left.innerHTML = `<span class="draw">DRAW</span>`;
+    right.innerHTML = `<span class="draw">DRAW</span>`;
     return;
   }
 
-  const clean=text.replace("X","").replace("O","").trim();
-  const sym=current;
+  const symbol = current === "X" ? "X" : "O";
 
-  const isLeft=(!swap&&text.includes("X"))||(swap&&text.includes("O"));
-  const t=isLeft?left:right;
+  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
+  const target = isLeft ? left : right;
 
-  t.innerHTML=`
-    <span class="symbol">${sym}</span>
-    <span class="label">${clean}</span>
+  target.innerHTML = `
+    <span class="symbol">${symbol}</span>
+    <span>${text}</span>
   `;
-  t.classList.add("metal");
+  target.classList.add("metal");
 }
 
 /* CLICK */
-board.onclick=e=>{
-  const cell=e.target.closest(".cell");
-  if(!cell||gameOver)return;
-  const i=cell.dataset.i;
-  if(boardState[i])return;
+board.onclick = e => {
+  const cell = e.target.closest(".cell");
+  if(!cell || gameOver) return;
+  const i = cell.dataset.i;
+  if(boardState[i]) return;
 
-  boardState[i]=current;
-
-  const m=document.createElement("div");
-  m.className="mark "+current.toLowerCase();
-  m.textContent=current;
+  boardState[i] = current;
+  const m = document.createElement("div");
+  m.className = "mark " + current.toLowerCase();
+  m.textContent = current;
   cell.appendChild(m);
 
-  playPlaceSound(current==="X");
+  playPlaceSound(current === "X");
 
-  const win=checkWin();
+  const win = checkWin();
   if(win){
-    gameOver=true;
+    gameOver = true;
     playSparkle();
-    drawWinBeam(win);
-    updateUI(current+" WINS");
+    updateUI(current + " WINS");
     return;
   }
-
-  if(boardState.every(x=>x)){
-    gameOver=true;
+  if(boardState.every(x => x)){
+    gameOver = true;
     updateUI("DRAW");
     return;
   }
-
-  current=current==="X"?"O":"X";
-  updateUI(current+" TURN");
+  current = current === "X" ? "O" : "X";
+  updateUI(current + " TURN");
 };
 
-/* WIN */
-const wins=[
-[0,1,2],[3,4,5],[6,7,8],
-[0,3,6],[1,4,7],[2,5,8],
-[0,4,8],[2,4,6]
+/* WIN CHECK */
+const wins = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
 ];
 
 function checkWin(){
-  return wins.find(([a,b,c])=>
-    boardState[a]&&
-    boardState[a]===boardState[b]&&
-    boardState[a]===boardState[c]
+  return wins.find(([a,b,c]) =>
+    boardState[a] && boardState[a]===boardState[b] && boardState[a]===boardState[c]
   );
 }
 
 /* RESET */
-restartBtn.onclick=()=>{
-  boardState=Array(9).fill(null);
-  current="X";
-  gameOver=false;
-  swap=!swap;
-
-  document.querySelectorAll(".cell").forEach(c=>c.innerHTML="");
-  winBeam.innerHTML="";
-  winBeam.style.opacity="0";
-
+restartBtn.onclick = () => {
+  boardState = Array(9).fill(null);
+  current = "X";
+  gameOver = false;
+  swap = !swap;
+  document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
   updateUI("X TURN");
   playResetSound();
 };
 
 updateUI("X TURN");
 </script>
-
 </body>
 </html>
