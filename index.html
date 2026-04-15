@@ -117,7 +117,7 @@ body{
   top:0;
   left:0;
   pointer-events:none;
-  z-index:10; /* INCREASED FROM 5 */
+  z-index:10;
 }
 /* FOG */
 #board::before{
@@ -233,17 +233,20 @@ const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
+
 /* ===== CANVAS ===== */
 const canvas = document.createElement("canvas");
 canvas.id = "winCanvas";
 board.appendChild(canvas);
 const ctx = canvas.getContext("2d");
+
 function resizeCanvas(){
   canvas.width = board.clientWidth;
   canvas.height = board.clientHeight;
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
+
 /* ===== SOUND SYSTEM ===== */
 let audioCtx;
 function playSound(freq, duration = 0.1, type = 'sine') {
@@ -270,6 +273,7 @@ function playSparkle() {
 function playResetSound() {
   playSound(420, 0.25, 'sine');
 }
+
 /* CREATE GRID */
 for(let i = 0; i < 9; i++){
   const c = document.createElement("div");
@@ -277,103 +281,114 @@ for(let i = 0; i < 9; i++){
   c.dataset.i = i;
   board.appendChild(c);
 }
-/* ===== FIXED: ULTRA-VISIBLE WINNING BEAMS ===== */
+
+/* ===== IMPROVED WINNING BEAM (Thick → Thin + Bright → Settled) ===== */
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
+  
   const getCenter = (el) => {
     const r = el.getBoundingClientRect();
     const br = board.getBoundingClientRect();
     const style = getComputedStyle(board);
     const borderLeft = parseFloat(style.borderLeftWidth) || 0;
-    const borderTop = parseFloat(style.borderTopWidth) || 0;
+    const borderTop  = parseFloat(style.borderTopWidth) || 0;
+    
     return {
-      x: r.left - br.left - borderLeft + r.width/2,
-      y: r.top - br.top - borderTop + r.height/2
+      x: r.left - br.left - borderLeft + r.width / 2,
+      y: r.top  - br.top  - borderTop  + r.height / 2
     };
   };
+
   const start = getCenter(cells[combo[0]]);
-  const end = getCenter(cells[combo[2]]);
-  const color = player === "X" ? "#00f0ff" : "#ff00cc";
- 
+  const end   = getCenter(cells[combo[2]]);
+
   let progress = 0;
-  const animationDuration = 1500; // 1.5 seconds
+  const animationDuration = 1400; // smooth 1.4s animation
   const startTime = performance.now();
+
   function animateBeam(currentTime) {
-    const elapsed = currentTime - startTime;
-    progress = Math.min(elapsed / animationDuration, 1);
-   
-    // FULL CLEAR
+    progress = Math.min((currentTime - startTime) / animationDuration, 1);
+
+    // Clear previous frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // MULTI-LAYER BEAM FOR MAX VISIBILITY
+
     const layers = [
-      // Ultra-thick outer glow layer
-      {width: 50 - (progress * 30), blur: 80 - (progress * 50), opacity: 0.9},
-      // Thick main beam
-      {width: 32 - (progress * 20), blur: 45 - (progress * 25), opacity: 1.0},
-      // Medium inner beam
-      {width: 20 - (progress * 12), blur: 25 - (progress * 15), opacity: 0.95},
-      // Thin core beam (settles here)
-      {width: 14 - (progress * 4), blur: 18 - (progress * 8), opacity: 1.0}
+      { width: 48 - (progress * 28), blur: 85 - (progress * 55), opacity: 0.85 },   // outer glow
+      { width: 34 - (progress * 18), blur: 50 - (progress * 30), opacity: 1.0 },    // main thick beam
+      { width: 22 - (progress * 10), blur: 28 - (progress * 15), opacity: 0.95 },   // medium
+      { width: 14 - (progress * 4),  blur: 14 - (progress * 6),  opacity: 1.0 }     // core (settles thin)
     ];
-    layers.forEach((layer, index) => {
+
+    layers.forEach(layer => {
       ctx.globalAlpha = layer.opacity;
       ctx.lineWidth = Math.max(layer.width, 8);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      // BRIGHTER COLORS FOR VISIBILITY
-      const brightColor = player === "X" ?
-        `rgba(0, 255, 255, ${layer.opacity})` :
-        `rgba(255, 0, 220, ${layer.opacity})`;
-     
-      ctx.strokeStyle = brightColor;
-      ctx.shadowColor = brightColor;
+
+      const alphaColor = player === "X" 
+        ? `rgba(0, 255, 255, ${layer.opacity})` 
+        : `rgba(255, 0, 204, ${layer.opacity})`;
+
+      ctx.strokeStyle = alphaColor;
+      ctx.shadowColor = alphaColor;
       ctx.shadowBlur = Math.max(layer.blur, 12);
+
       ctx.beginPath();
       ctx.moveTo(start.x, start.y);
       ctx.lineTo(end.x, end.y);
       ctx.stroke();
     });
-    ctx.globalAlpha = 1.0; // Reset alpha
+
+    ctx.globalAlpha = 1.0;
+
     if (progress < 1) {
       requestAnimationFrame(animateBeam);
     }
   }
-  // START THE BEAM EXPLOSION
+
   requestAnimationFrame(animateBeam);
 }
+
 /* UI UPDATE */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
   left.className = "side";
   right.className = "side";
+  
   if(text === "DRAW"){
     left.innerHTML = `<span class="draw">DRAW</span>`;
     right.innerHTML = `<span class="draw">DRAW</span>`;
     return;
   }
+  
   const cleanText = text.replace("X","").replace("O","").trim();
   const symbol = current === "X" ? "X" : "O";
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
   const target = isLeft ? left : right;
+  
   target.innerHTML = `
     <span class="symbol">${symbol}</span>
     <span class="label">${cleanText}</span>
   `;
   target.classList.add("metal");
 }
+
 /* CLICK */
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
   const i = cell.dataset.i;
   if(boardState[i]) return;
+
   boardState[i] = current;
   const m = document.createElement("div");
   m.className = "mark " + current.toLowerCase();
   m.textContent = current;
   cell.appendChild(m);
+
   playPlaceSound(current === "X");
+
   const win = checkWin();
   if(win){
     gameOver = true;
@@ -382,38 +397,46 @@ board.onclick = e => {
     updateUI(current + " WINS");
     return;
   }
+
   if(boardState.every(x => x)){
     gameOver = true;
     updateUI("DRAW");
     return;
   }
+
   current = current === "X" ? "O" : "X";
   updateUI(current + " TURN");
 };
+
 /* WIN CHECK */
 const wins = [
   [0,1,2],[3,4,5],[6,7,8],
   [0,3,6],[1,4,7],[2,5,8],
   [0,4,8],[2,4,6]
 ];
+
 function checkWin(){
   return wins.find(([a,b,c]) =>
     boardState[a] &&
-    boardState[a]===boardState[b] &&
-    boardState[a]===boardState[c]
+    boardState[a] === boardState[b] &&
+    boardState[a] === boardState[c]
   );
 }
+
 /* RESET */
 restartBtn.onclick = () => {
   boardState = Array(9).fill(null);
   current = "X";
   gameOver = false;
   swap = !swap;
+  
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear beam
+  
   updateUI("X TURN");
   playResetSound();
 };
+
 updateUI("X TURN");
 </script>
 </body>
