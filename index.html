@@ -17,7 +17,7 @@ body{
   overflow:hidden;
 }
 
-/* TITLE */
+/* ===== TITLE ===== */
 #title{
   font-size:77px;
   font-weight:900;
@@ -34,7 +34,7 @@ body{
   100%{background-position:400%}
 }
 
-/* LAYOUT */
+/* ===== LAYOUT ===== */
 #game{
   display:flex;
   align-items:center;
@@ -42,7 +42,7 @@ body{
   gap:220px;
 }
 
-/* SIDE */
+/* SIDE STATUS */
 .side{
   width:220px;
   text-align:center;
@@ -57,19 +57,50 @@ body{
   gap:4px;
 }
 
+/* SYMBOL ABOVE TEXT */
 .side .symbol {
   font-size:82px;
   font-weight:900;
-  color:#fff;
-  text-shadow:0 0 12px #fff,0 0 28px #d0f0ff,0 0 50px #fff;
+  line-height:1;
+  color:#ffffff;
+  text-shadow:
+    0 0 12px #ffffff,
+    0 0 28px #d0f0ff,
+    0 0 50px #ffffff;
 }
 
+/* TEXT UNDER SYMBOL */
+.side .label {
+  display:block;
+}
+
+/* METAL TEXT */
 .metal{
   color:#fff;
-  text-shadow:0 0 10px #fff,0 0 25px #fff,0 0 50px #fff;
+  text-shadow:
+    0 0 10px #fff,
+    0 0 25px #fff,
+    0 0 50px #fff;
 }
 
-/* BOARD */
+/* DRAW TEXT */
+.draw{
+  color:#ff0033;
+  font-size:90px;
+  text-shadow:
+    0 0 10px #ffffff,
+    0 0 25px #ffffff,
+    0 0 20px #ff0033,
+    0 0 40px #ff0033,
+    0 0 80px #ff0033;
+  animation: drawPulse 3.2s ease-in-out infinite;
+}
+@keyframes drawPulse {
+  0%,100%{opacity:0.92;}
+  50%{opacity:1;}
+}
+
+/* ===== BOARD ===== */
 #board{
   position:relative;
   display:grid;
@@ -88,10 +119,32 @@ body{
 /* ✅ FIXED CANVAS */
 #winCanvas{
   position:absolute;
-  top:20px;   /* MATCH BOARD PADDING */
-  left:20px;  /* MATCH BOARD PADDING */
+  top:20px;
+  left:20px;
   pointer-events:none;
   z-index:50;
+}
+
+/* FOG */
+#board::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:-140px;
+  right:-140px;
+  border-radius:50px;
+  pointer-events:none;
+  background:radial-gradient(
+    ellipse at center,
+    rgba(0,240,255,0.35),
+    transparent 70%
+  );
+  animation:sidePulse 2.2s ease-in-out infinite;
+}
+@keyframes sidePulse{
+  0%,100%{ opacity:0.4; transform:scaleX(1); }
+  50%{ opacity:1; transform:scaleX(1.35); }
 }
 
 /* CELLS */
@@ -134,10 +187,12 @@ body{
   padding:18px 80px;
   font-size:24px;
   font-weight:900;
+  letter-spacing:3px;
   border:none;
   border-radius:60px;
   cursor:pointer;
   background:linear-gradient(180deg,#d4ff4d,#a6ff00);
+  color:#111;
 }
 </style>
 </head>
@@ -157,8 +212,12 @@ body{
 let boardState = Array(9).fill(null);
 let current = "X";
 let gameOver = false;
+let swap = false;
 
 const board = document.getElementById("board");
+const left = document.getElementById("left");
+const right = document.getElementById("right");
+const restartBtn = document.getElementById("restart");
 
 /* ===== CANVAS ===== */
 const canvas = document.createElement("canvas");
@@ -166,10 +225,10 @@ canvas.id = "winCanvas";
 board.appendChild(canvas);
 const ctx = canvas.getContext("2d");
 
-/* ✅ PERFECT CANVAS SIZE */
+/* ✅ FIXED RESIZE */
 function resizeCanvas(){
   const cells = document.querySelectorAll(".cell");
-  if(cells.length === 0) return;
+  if(!cells.length) return;
 
   const first = cells[0].getBoundingClientRect();
   const last = cells[8].getBoundingClientRect();
@@ -189,11 +248,11 @@ function resizeCanvas(){
 }
 window.addEventListener("resize", resizeCanvas);
 
-/* GRID */
-for(let i=0;i<9;i++){
-  const c=document.createElement("div");
-  c.className="cell";
-  c.dataset.i=i;
+/* CREATE GRID */
+for(let i = 0; i < 9; i++){
+  const c = document.createElement("div");
+  c.className = "cell";
+  c.dataset.i = i;
   board.appendChild(c);
 }
 resizeCanvas();
@@ -202,10 +261,10 @@ resizeCanvas();
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
 
-  const getCenter = (el) => {
-    const r = el.getBoundingClientRect();
-    const base = cells[0].getBoundingClientRect();
+  const base = cells[0].getBoundingClientRect();
 
+  const getCenter = (el)=>{
+    const r = el.getBoundingClientRect();
     return {
       x: r.left - base.left + r.width/2,
       y: r.top - base.top + r.height/2
@@ -220,26 +279,33 @@ function drawWinLine(combo, player){
   let startTime = performance.now();
 
   function animate(t){
-    let p = Math.min((t - startTime)/800,1);
+    let p = Math.min((t - startTime)/900,1);
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    const width = 40 - (p * 26);
+    const layers = [
+      {w:48 - p*30, blur:60 - p*40, a:0.9},
+      {w:28 - p*16, blur:35 - p*20, a:1},
+      {w:16 - p*6, blur:20 - p*10, a:1}
+    ];
 
-    ctx.lineCap="round";
+    layers.forEach(L=>{
+      ctx.globalAlpha = L.a;
+      ctx.strokeStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = L.blur;
+      ctx.lineWidth = Math.max(L.w,8);
+      ctx.lineCap="round";
 
-    ctx.strokeStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 40 - (p*25);
+      ctx.beginPath();
+      ctx.moveTo(start.x,start.y);
+      ctx.lineTo(end.x,end.y);
+      ctx.stroke();
+    });
 
-    ctx.lineWidth = width;
+    ctx.globalAlpha = 1;
 
-    ctx.beginPath();
-    ctx.moveTo(start.x,start.y);
-    ctx.lineTo(end.x,end.y);
-    ctx.stroke();
-
-    if(p < 1) requestAnimationFrame(animate);
+    if(p<1) requestAnimationFrame(animate);
   }
 
   requestAnimationFrame(animate);
@@ -255,25 +321,25 @@ board.onclick = e => {
 
   boardState[i] = current;
 
-  const m=document.createElement("div");
-  m.className="mark "+current.toLowerCase();
-  m.textContent=current;
+  const m = document.createElement("div");
+  m.className = "mark " + current.toLowerCase();
+  m.textContent = current;
   cell.appendChild(m);
 
   const win = checkWin();
 
   if(win){
     gameOver = true;
-    drawWinLine(win,current);
+    drawWinLine(win, current);
     return;
   }
 
-  if(boardState.every(x=>x)){
-    gameOver=true;
+  if(boardState.every(x => x)){
+    gameOver = true;
     return;
   }
 
-  current = current==="X"?"O":"X";
+  current = current === "X" ? "O" : "X";
 };
 
 /* WIN */
@@ -292,12 +358,13 @@ function checkWin(){
 }
 
 /* RESET */
-document.getElementById("restart").onclick=()=>{
-  boardState=Array(9).fill(null);
-  current="X";
-  gameOver=false;
+restartBtn.onclick = () => {
+  boardState = Array(9).fill(null);
+  current = "X";
+  gameOver = false;
+  swap = !swap;
 
-  document.querySelectorAll(".cell").forEach(c=>c.innerHTML="");
+  document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
   ctx.clearRect(0,0,canvas.width,canvas.height);
 };
 </script>
