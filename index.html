@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -42,7 +42,7 @@ body{
   gap:220px;
 }
 
-/* SIDE STATUS */
+/* SIDE STATUS - SINGLE SYMBOL CENTERED ABOVE TEXT */
 .side{
   width:220px;
   text-align:center;
@@ -57,7 +57,7 @@ body{
   gap: 4px;
 }
 
-/* SYMBOL ABOVE TEXT */
+/* PLAYER SYMBOL - CENTERED ABOVE THE WORD */
 .side .symbol {
   font-size: 82px;
   font-weight: 900;
@@ -69,11 +69,6 @@ body{
     0 0 50px #ffffff;
 }
 
-/* TEXT UNDER SYMBOL */
-.side .label {
-  display:block;
-}
-
 /* METAL TEXT */
 .metal{
   color:#fff;
@@ -83,7 +78,7 @@ body{
     0 0 50px #fff;
 }
 
-/* DRAW TEXT */
+/* DRAW TEXT WITH SUBTLE PULSE */
 .draw{
   color:#ff0033;
   font-size:90px;
@@ -99,9 +94,21 @@ body{
 @keyframes drawPulse {
   0%, 100% { 
     opacity: 0.92; 
+    text-shadow:
+      0 0 10px #ffffff,
+      0 0 25px #ffffff,
+      0 0 20px #ff0033,
+      0 0 40px #ff0033,
+      0 0 80px #ff0033;
   }
   50% { 
     opacity: 1; 
+    text-shadow:
+      0 0 15px #ffffff,
+      0 0 35px #ffffff,
+      0 0 30px #ff0033,
+      0 0 55px #ff0033,
+      0 0 100px #ff0033;
   }
 }
 
@@ -121,7 +128,7 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
-/* FOG */
+/* SIDE GLOW / FOG */
 #board::before{
   content:"";
   position:absolute;
@@ -207,6 +214,7 @@ body{
   overflow: hidden;
 }
 
+/* Gentle white glowing coat */
 #restart::before {
   content: '';
   position: absolute;
@@ -224,15 +232,12 @@ body{
 </style>
 </head>
 <body>
-
 <div id="title">X/O CLASH</div>
-
 <div id="game">
   <div id="left" class="side"></div>
   <div id="board"></div>
   <div id="right" class="side"></div>
 </div>
-
 <button id="restart">RESTART</button>
 
 <script>
@@ -246,23 +251,18 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-/* ===== SOUND SYSTEM (RESTORED) ===== */
 let audioCtx;
 
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
   gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-
   oscillator.connect(gain);
   gain.connect(audioCtx.destination);
-
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
@@ -289,7 +289,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* UI UPDATE */
+/* UI UPDATE - SINGLE SYMBOL CENTERED ABOVE TEXT ONLY */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -302,7 +302,6 @@ function updateUI(text){
     return;
   }
 
-  const cleanText = text.replace("X","").replace("O","").trim();
   const symbol = current === "X" ? "X" : "O";
 
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
@@ -310,9 +309,8 @@ function updateUI(text){
 
   target.innerHTML = `
     <span class="symbol">${symbol}</span>
-    <span class="label">${cleanText}</span>
+    <span>${text}</span>
   `;
-
   target.classList.add("metal");
 }
 
@@ -320,12 +318,10 @@ function updateUI(text){
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
-
   const i = cell.dataset.i;
   if(boardState[i]) return;
 
   boardState[i] = current;
-
   const m = document.createElement("div");
   m.className = "mark " + current.toLowerCase();
   m.textContent = current;
@@ -334,20 +330,17 @@ board.onclick = e => {
   playPlaceSound(current === "X");
 
   const win = checkWin();
-
   if(win){
     gameOver = true;
     playSparkle();
     updateUI(current + " WINS");
     return;
   }
-
   if(boardState.every(x => x)){
     gameOver = true;
     updateUI("DRAW");
     return;
   }
-
   current = current === "X" ? "O" : "X";
   updateUI(current + " TURN");
 };
@@ -361,9 +354,7 @@ const wins = [
 
 function checkWin(){
   return wins.find(([a,b,c]) =>
-    boardState[a] &&
-    boardState[a]===boardState[b] &&
-    boardState[a]===boardState[c]
+    boardState[a] && boardState[a]===boardState[b] && boardState[a]===boardState[c]
   );
 }
 
@@ -373,15 +364,12 @@ restartBtn.onclick = () => {
   current = "X";
   gameOver = false;
   swap = !swap;
-
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-
   updateUI("X TURN");
   playResetSound();
 };
 
 updateUI("X TURN");
 </script>
-
 </body>
 </html>
