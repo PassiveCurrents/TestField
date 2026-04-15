@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -16,6 +16,7 @@ body{
   color:white;
   overflow:hidden;
 }
+
 /* ===== TITLE ===== */
 #title{
   font-size:77px;
@@ -32,6 +33,7 @@ body{
   0%{background-position:0%}
   100%{background-position:400%}
 }
+
 /* ===== LAYOUT ===== */
 #game{
   display:flex;
@@ -39,6 +41,7 @@ body{
   justify-content:center;
   gap:220px;
 }
+
 /* SIDE STATUS */
 .side{
   width:220px;
@@ -53,6 +56,7 @@ body{
   align-items: center;
   gap: 4px;
 }
+
 /* SYMBOL ABOVE TEXT */
 .side .symbol {
   font-size: 82px;
@@ -64,10 +68,12 @@ body{
     0 0 28px #d0f0ff,
     0 0 50px #ffffff;
 }
+
 /* TEXT UNDER SYMBOL */
 .side .label {
   display:block;
 }
+
 /* METAL TEXT */
 .metal{
   color:#fff;
@@ -76,6 +82,7 @@ body{
     0 0 25px #fff,
     0 0 50px #fff;
 }
+
 /* DRAW TEXT */
 .draw{
   color:#ff0033;
@@ -88,14 +95,16 @@ body{
     0 0 80px #ff0033;
   animation: drawPulse 3.2s ease-in-out infinite;
 }
+
 @keyframes drawPulse {
-  0%, 100% {
-    opacity: 0.92;
+  0%, 100% { 
+    opacity: 0.92; 
   }
-  50% {
-    opacity: 1;
+  50% { 
+    opacity: 1; 
   }
 }
+
 /* ===== BOARD ===== */
 #board{
   position:relative;
@@ -111,14 +120,18 @@ body{
     0 0 150px #00f0ff,
     inset 0 0 40px #00f0ff55;
 }
-/* WIN CANVAS - FIXED Z-INDEX */
+
+/* WIN CANVAS - PERFECTLY POSITIONED */
 #winCanvas{
   position:absolute;
-  top:0;
-  left:0;
+  top:20px;  /* MATCH PADDING */
+  left:20px; /* MATCH PADDING */
+  width: calc(100% - 40px); /* ACCOUNT FOR PADDING */
+  height: calc(100% - 40px); /* ACCOUNT FOR PADDING */
   pointer-events:none;
   z-index:10;
 }
+
 /* FOG */
 #board::before{
   content:"";
@@ -140,6 +153,7 @@ body{
   0%,100%{ opacity:0.4; transform:scaleX(1); }
   50%{ opacity:1; transform:scaleX(1.35); }
 }
+
 /* CELLS */
 .cell{
   width:86px;
@@ -154,6 +168,7 @@ body{
     0 0 15px #000,
     inset 0 0 20px #ffffff22;
 }
+
 /* MARKS */
 .mark{
   font-size:64px;
@@ -178,6 +193,7 @@ body{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-10px)}
 }
+
 /* RESTART BUTTON */
 #restart{
   margin-top:40px;
@@ -201,6 +217,7 @@ body{
   position: relative;
   overflow: hidden;
 }
+
 #restart::before {
   content: '';
   position: absolute;
@@ -211,65 +228,91 @@ body{
   filter: blur(8px);
   opacity: 0.85;
 }
+
 #restart:active{
   transform:scale(0.93);
 }
 </style>
 </head>
 <body>
+
 <div id="title">X/O CLASH</div>
+
 <div id="game">
   <div id="left" class="side"></div>
   <div id="board"></div>
   <div id="right" class="side"></div>
 </div>
+
 <button id="restart">RESTART</button>
+
 <script>
 let boardState = Array(9).fill(null);
 let current = "X";
 let gameOver = false;
 let swap = false;
+
 const board = document.getElementById("board");
 const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-/* ===== CANVAS ===== */
+/* ===== FIXED CANVAS SETUP ===== */
 const canvas = document.createElement("canvas");
 canvas.id = "winCanvas";
 board.appendChild(canvas);
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas(){
-  canvas.width = board.clientWidth;
-  canvas.height = board.clientHeight;
+// HiDPI + Perfect sizing
+function resizeCanvas() {
+  const rect = board.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  
+  // Canvas display size (inside padding)
+  canvas.style.width = (rect.width - 40) + 'px';
+  canvas.style.height = (rect.height - 40) + 'px';
+  
+  // Canvas resolution (HiDPI)
+  canvas.width = (rect.width - 40) * dpr;
+  canvas.height = (rect.height - 40) * dpr;
+  
+  // Scale context for crisp lines
+  ctx.scale(dpr, dpr);
 }
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
 /* ===== SOUND SYSTEM ===== */
 let audioCtx;
+
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
+
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
   gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
   oscillator.connect(gain);
   gain.connect(audioCtx.destination);
+
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
+
 function playPlaceSound(isX) {
   playSound(isX ? 720 : 540, 0.09, 'triangle');
 }
+
 function playSparkle() {
   playSound(880, 0.08, 'sine');
   setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
   setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
 }
+
 function playResetSound() {
   playSound(420, 0.25, 'sine');
 }
@@ -282,54 +325,60 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* ===== WINNING BEAM - Thick & Bright → Settles Thinner ===== */
+/* ===== PERFECTLY ALIGNED WINNING BEAMS ===== */
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
-  
+
+  // FIXED: Account for canvas offset (20px padding)
+  const canvasOffsetX = 20;
+  const canvasOffsetY = 20;
+
   const getCenter = (el) => {
-    const r = el.getBoundingClientRect();
-    const br = board.getBoundingClientRect();
-    const style = getComputedStyle(board);
-    const borderLeft = parseFloat(style.borderLeftWidth) || 0;
-    const borderTop  = parseFloat(style.borderTopWidth) || 0;
+    const rect = el.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
     
+    // Transform to canvas coordinates (inside padding)
     return {
-      x: r.left - br.left - borderLeft + r.width / 2,
-      y: r.top  - br.top  - borderTop  + r.height / 2
+      x: (rect.left - boardRect.left + rect.width/2) - canvasOffsetX,
+      y: (rect.top - boardRect.top + rect.height/2) - canvasOffsetY
     };
   };
 
   const start = getCenter(cells[combo[0]]);
-  const end   = getCenter(cells[combo[2]]);
+  const end = getCenter(cells[combo[2]]);
 
+  const color = player === "X" ? "#00f0ff" : "#ff00cc";
+  
   let progress = 0;
-  const animationDuration = 1400;
+  const animationDuration = 1500;
   const startTime = performance.now();
 
   function animateBeam(currentTime) {
-    progress = Math.min((currentTime - startTime) / animationDuration, 1);
-
+    const elapsed = currentTime - startTime;
+    progress = Math.min(elapsed / animationDuration, 1);
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // 4-LAYER BEAM SYSTEM
     const layers = [
-      { width: 48 - (progress * 28), blur: 85 - (progress * 55), opacity: 0.85 },   // outer glow
-      { width: 34 - (progress * 18), blur: 50 - (progress * 30), opacity: 1.0 },    // main thick beam
-      { width: 22 - (progress * 10), blur: 28 - (progress * 15), opacity: 0.95 },   // medium
-      { width: 14 - (progress * 4),  blur: 14 - (progress * 6),  opacity: 1.0 }     // core (settles thin)
+      {width: 50 - (progress * 30), blur: 80 - (progress * 50), opacity: 0.9},
+      {width: 32 - (progress * 20), blur: 45 - (progress * 25), opacity: 1.0},
+      {width: 20 - (progress * 12), blur: 25 - (progress * 15), opacity: 0.95},
+      {width: 14 - (progress * 4), blur: 18 - (progress * 8), opacity: 1.0}
     ];
 
-    layers.forEach(layer => {
+    layers.forEach((layer) => {
       ctx.globalAlpha = layer.opacity;
       ctx.lineWidth = Math.max(layer.width, 8);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      const alphaColor = player === "X" 
-        ? `rgba(0, 255, 255, ${layer.opacity})` 
-        : `rgba(255, 0, 204, ${layer.opacity})`;
-
-      ctx.strokeStyle = alphaColor;
-      ctx.shadowColor = alphaColor;
+      const brightColor = player === "X" ? 
+        `rgba(0, 255, 255, ${layer.opacity})` : 
+        `rgba(255, 0, 220, ${layer.opacity})`;
+      
+      ctx.strokeStyle = brightColor;
+      ctx.shadowColor = brightColor;
       ctx.shadowBlur = Math.max(layer.blur, 12);
 
       ctx.beginPath();
@@ -354,22 +403,24 @@ function updateUI(text){
   right.innerHTML = "";
   left.className = "side";
   right.className = "side";
-  
+
   if(text === "DRAW"){
     left.innerHTML = `<span class="draw">DRAW</span>`;
     right.innerHTML = `<span class="draw">DRAW</span>`;
     return;
   }
-  
+
   const cleanText = text.replace("X","").replace("O","").trim();
   const symbol = current === "X" ? "X" : "O";
+
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
   const target = isLeft ? left : right;
-  
+
   target.innerHTML = `
     <span class="symbol">${symbol}</span>
     <span class="label">${cleanText}</span>
   `;
+
   target.classList.add("metal");
 }
 
@@ -377,10 +428,12 @@ function updateUI(text){
 board.onclick = e => {
   const cell = e.target.closest(".cell");
   if(!cell || gameOver) return;
+
   const i = cell.dataset.i;
   if(boardState[i]) return;
 
   boardState[i] = current;
+
   const m = document.createElement("div");
   m.className = "mark " + current.toLowerCase();
   m.textContent = current;
@@ -389,6 +442,7 @@ board.onclick = e => {
   playPlaceSound(current === "X");
 
   const win = checkWin();
+
   if(win){
     gameOver = true;
     playSparkle();
@@ -417,8 +471,8 @@ const wins = [
 function checkWin(){
   return wins.find(([a,b,c]) =>
     boardState[a] &&
-    boardState[a] === boardState[b] &&
-    boardState[a] === boardState[c]
+    boardState[a]===boardState[b] &&
+    boardState[a]===boardState[c]
   );
 }
 
@@ -428,15 +482,16 @@ restartBtn.onclick = () => {
   current = "X";
   gameOver = false;
   swap = !swap;
-  
+
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear beam
-  
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
   updateUI("X TURN");
   playResetSound();
 };
 
 updateUI("X TURN");
 </script>
+
 </body>
 </html>
