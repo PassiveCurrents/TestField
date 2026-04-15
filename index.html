@@ -97,8 +97,12 @@ body{
 }
 
 @keyframes drawPulse {
-  0%, 100% { opacity: 0.92; }
-  50% { opacity: 1; }
+  0%, 100% { 
+    opacity: 0.92; 
+  }
+  50% { 
+    opacity: 1; 
+  }
 }
 
 /* ===== BOARD ===== */
@@ -251,7 +255,7 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-/* CANVAS */
+/* ===== ADD CANVAS ===== */
 const canvas = document.createElement("canvas");
 canvas.id = "winCanvas";
 board.appendChild(canvas);
@@ -264,8 +268,9 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-/* SOUND */
+/* ===== SOUND SYSTEM ===== */
 let audioCtx;
+
 function playSound(freq, duration = 0.1, type = 'sine') {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audioCtx.createOscillator();
@@ -283,15 +288,22 @@ function playSound(freq, duration = 0.1, type = 'sine') {
   oscillator.start();
   oscillator.stop(audioCtx.currentTime + duration);
 }
-function playPlaceSound(isX) { playSound(isX ? 720 : 540, 0.09, 'triangle'); }
-function playSparkle() {
-  playSound(880, 0.08);
-  setTimeout(() => playSound(1100, 0.08), 40);
-  setTimeout(() => playSound(1320, 0.12), 90);
-}
-function playResetSound() { playSound(420, 0.25); }
 
-/* GRID */
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
+
+function playSparkle() {
+  playSound(880, 0.08, 'sine');
+  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
+  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+}
+
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
+}
+
+/* CREATE GRID */
 for(let i = 0; i < 9; i++){
   const c = document.createElement("div");
   c.className = "cell";
@@ -299,7 +311,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* ===== NEW: ANIMATED BEAM ===== */
+/* ===== UPGRADED WINNING BEAM ===== */
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
 
@@ -316,39 +328,49 @@ function drawWinLine(combo, player){
   const end = getCenter(cells[combo[2]]);
 
   const color = player === "X" ? "#00f0ff" : "#ff00cc";
-
+  
   let progress = 0;
+  const animationDuration = 1200; // 1.2 seconds
+  const startTime = performance.now();
 
-  function animate(){
-    progress += 0.06;
+  function animateBeam(currentTime) {
+    progress = Math.min((currentTime - startTime) / animationDuration, 1);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // THICK → THIN animation (starts at 36px, settles to 14px)
+    const thickness = 36 - (progress * 22);
+    // BRIGHT → DIM glow (starts at 70px blur, settles to 20px)
+    const glowIntensity = 70 - (progress * 50);
 
-    // THICK → THIN
-    const thickness = 28 - (progress * 16);
-    const glow = 60 - (progress * 35);
-
-    ctx.lineWidth = Math.max(thickness, 10);
+    ctx.lineWidth = Math.max(thickness, 14);
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
+    // Main beam with gradient-like effect
     ctx.strokeStyle = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur = Math.max(glow, 15);
+    ctx.shadowBlur = Math.max(glowIntensity, 20);
 
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);
     ctx.stroke();
 
-    if(progress < 1){
-      requestAnimationFrame(animate);
+    // Inner core glow for extra effect
+    ctx.shadowBlur = Math.max(glowIntensity * 0.4, 8);
+    ctx.lineWidth = Math.max(thickness * 0.4, 6);
+    ctx.stroke();
+
+    if (progress < 1) {
+      requestAnimationFrame(animateBeam);
     }
   }
 
-  animate();
+  requestAnimationFrame(animateBeam);
 }
 
-/* UI */
+/* UI UPDATE */
 function updateUI(text){
   left.innerHTML = "";
   right.innerHTML = "";
@@ -362,7 +384,7 @@ function updateUI(text){
   }
 
   const cleanText = text.replace("X","").replace("O","").trim();
-  const symbol = current;
+  const symbol = current === "X" ? "X" : "O";
 
   const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
   const target = isLeft ? left : right;
@@ -371,6 +393,7 @@ function updateUI(text){
     <span class="symbol">${symbol}</span>
     <span class="label">${cleanText}</span>
   `;
+
   target.classList.add("metal");
 }
 
@@ -434,7 +457,7 @@ restartBtn.onclick = () => {
   swap = !swap;
 
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height); // CLEAR BEAM
 
   updateUI("X TURN");
   playResetSound();
