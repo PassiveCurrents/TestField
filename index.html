@@ -121,6 +121,15 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
+/* NEW: WIN CANVAS */
+#winCanvas{
+  position:absolute;
+  top:0;
+  left:0;
+  pointer-events:none;
+  z-index:5;
+}
+
 /* FOG */
 #board::before{
   content:"";
@@ -246,6 +255,19 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
+/* ===== ADD CANVAS ===== */
+const canvas = document.createElement("canvas");
+canvas.id = "winCanvas";
+board.appendChild(canvas);
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas(){
+  canvas.width = board.clientWidth;
+  canvas.height = board.clientHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
 /* ===== SOUND SYSTEM (RESTORED) ===== */
 let audioCtx;
 
@@ -287,6 +309,39 @@ for(let i = 0; i < 9; i++){
   c.className = "cell";
   c.dataset.i = i;
   board.appendChild(c);
+}
+
+/* DRAW WIN LINE */
+function drawWinLine(combo, player){
+  const cells = [...document.querySelectorAll(".cell")];
+
+  const getCenter = (el) => {
+    const r = el.getBoundingClientRect();
+    const br = board.getBoundingClientRect();
+    return {
+      x: r.left - br.left + r.width/2,
+      y: r.top - br.top + r.height/2
+    };
+  };
+
+  const start = getCenter(cells[combo[0]]);
+  const end = getCenter(cells[combo[2]]);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.lineWidth = 18;
+  ctx.lineCap = "round";
+
+  const color = player === "X" ? "#00f0ff" : "#ff00cc";
+
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 35;
+
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
 }
 
 /* UI UPDATE */
@@ -338,6 +393,7 @@ board.onclick = e => {
   if(win){
     gameOver = true;
     playSparkle();
+    drawWinLine(win, current); // NEW
     updateUI(current + " WINS");
     return;
   }
@@ -375,6 +431,7 @@ restartBtn.onclick = () => {
   swap = !swap;
 
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
+  ctx.clearRect(0,0,canvas.width,canvas.height); // CLEAR LINE
 
   updateUI("X TURN");
   playResetSound();
