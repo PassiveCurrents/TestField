@@ -97,8 +97,12 @@ body{
 }
 
 @keyframes drawPulse {
-  0%, 100% { opacity: 0.92; }
-  50% { opacity: 1; }
+  0%, 100% { 
+    opacity: 0.92; 
+  }
+  50% { 
+    opacity: 1; 
+  }
 }
 
 /* ===== BOARD ===== */
@@ -117,15 +121,13 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
-/* NEW: WIN CANVAS (ADDED ONLY) */
+/* NEW: WIN CANVAS */
 #winCanvas{
   position:absolute;
   top:0;
   left:0;
-  width:100%;
-  height:100%;
   pointer-events:none;
-  z-index:20;
+  z-index:5;
 }
 
 /* FOG */
@@ -202,6 +204,31 @@ body{
   cursor:pointer;
   background:linear-gradient(180deg, #d4ff4d, #a6ff00);
   color:#111;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.5),
+    0 2px 4px rgba(0,0,0,0.4);
+  box-shadow:
+    0 0 40px #baff00,
+    0 0 80px #baff00,
+    inset 0 4px 12px rgba(255,255,255,0.7),
+    inset 0 -6px 12px rgba(0,0,0,0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+#restart::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 65px;
+  background: linear-gradient(white, rgba(255,255,255,0.65));
+  z-index: -1;
+  filter: blur(8px);
+  opacity: 0.85;
+}
+
+#restart:active{
+  transform:scale(0.93);
 }
 </style>
 </head>
@@ -241,16 +268,59 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-/* DRAW WIN LINE (CENTER-BASED, FIXED) */
-function drawWinLine(combo, player){
-  const cells = document.querySelectorAll(".cell");
+/* ===== SOUND SYSTEM (RESTORED) ===== */
+let audioCtx;
 
-  const getCenter = (cell) => {
-    const rect = cell.getBoundingClientRect();
-    const bRect = board.getBoundingClientRect();
+function playSound(freq, duration = 0.1, type = 'sine') {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration);
+}
+
+function playPlaceSound(isX) {
+  playSound(isX ? 720 : 540, 0.09, 'triangle');
+}
+
+function playSparkle() {
+  playSound(880, 0.08, 'sine');
+  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
+  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+}
+
+function playResetSound() {
+  playSound(420, 0.25, 'sine');
+}
+
+/* CREATE GRID */
+for(let i = 0; i < 9; i++){
+  const c = document.createElement("div");
+  c.className = "cell";
+  c.dataset.i = i;
+  board.appendChild(c);
+}
+
+/* DRAW WIN LINE */
+function drawWinLine(combo, player){
+  const cells = [...document.querySelectorAll(".cell")];
+
+  const getCenter = (el) => {
+    const r = el.getBoundingClientRect();
+    const br = board.getBoundingClientRect();
     return {
-      x: rect.left - bRect.left + rect.width/2,
-      y: rect.top - bRect.top + rect.height/2
+      x: r.left - br.left + r.width/2,
+      y: r.top - br.top + r.height/2
     };
   };
 
@@ -259,38 +329,46 @@ function drawWinLine(combo, player){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  ctx.lineWidth = 18;
+  ctx.lineCap = "round";
+
   const color = player === "X" ? "#00f0ff" : "#ff00cc";
 
   ctx.strokeStyle = color;
-  ctx.lineWidth = 22;
-  ctx.lineCap = "round";
   ctx.shadowColor = color;
-  ctx.shadowBlur = 45;
+  ctx.shadowBlur = 35;
 
   ctx.beginPath();
-
-  // extend line beyond cells for full beam
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.sqrt(dx*dx + dy*dy);
-
-  const offsetX = (dx/len) * 60;
-  const offsetY = (dy/len) * 60;
-
-  ctx.moveTo(start.x - offsetX, start.y - offsetY);
-  ctx.lineTo(end.x + offsetX, end.y + offsetY);
-
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
   ctx.stroke();
 }
 
-/* ===== ORIGINAL CODE CONTINUES UNCHANGED ===== */
+/* UI UPDATE */
+function updateUI(text){
+  left.innerHTML = "";
+  right.innerHTML = "";
+  left.className = "side";
+  right.className = "side";
 
-/* CREATE GRID */
-for(let i = 0; i < 9; i++){
-  const c = document.createElement("div");
-  c.className = "cell";
-  c.dataset.i = i;
-  board.appendChild(c);
+  if(text === "DRAW"){
+    left.innerHTML = `<span class="draw">DRAW</span>`;
+    right.innerHTML = `<span class="draw">DRAW</span>`;
+    return;
+  }
+
+  const cleanText = text.replace("X","").replace("O","").trim();
+  const symbol = current === "X" ? "X" : "O";
+
+  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
+  const target = isLeft ? left : right;
+
+  target.innerHTML = `
+    <span class="symbol">${symbol}</span>
+    <span class="label">${cleanText}</span>
+  `;
+
+  target.classList.add("metal");
 }
 
 /* CLICK */
@@ -308,11 +386,14 @@ board.onclick = e => {
   m.textContent = current;
   cell.appendChild(m);
 
+  playPlaceSound(current === "X");
+
   const win = checkWin();
 
   if(win){
     gameOver = true;
-    drawWinLine(win, current); // ONLY ADDITION
+    playSparkle();
+    drawWinLine(win, current); // NEW
     updateUI(current + " WINS");
     return;
   }
@@ -353,6 +434,7 @@ restartBtn.onclick = () => {
   ctx.clearRect(0,0,canvas.width,canvas.height); // CLEAR LINE
 
   updateUI("X TURN");
+  playResetSound();
 };
 
 updateUI("X TURN");
