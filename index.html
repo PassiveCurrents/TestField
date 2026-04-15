@@ -282,7 +282,7 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* ===== IMPROVED WINNING BEAM (Thick → Thin + Bright → Settled) ===== */
+/* ===== WINNING BEAM - Thick & Bright → Settles Thinner ===== */
 function drawWinLine(combo, player){
   const cells = [...document.querySelectorAll(".cell")];
   
@@ -303,13 +303,12 @@ function drawWinLine(combo, player){
   const end   = getCenter(cells[combo[2]]);
 
   let progress = 0;
-  const animationDuration = 1400; // smooth 1.4s animation
+  const animationDuration = 1400;
   const startTime = performance.now();
 
   function animateBeam(currentTime) {
     progress = Math.min((currentTime - startTime) / animationDuration, 1);
 
-    // Clear previous frame
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const layers = [
