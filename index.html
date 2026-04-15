@@ -359,35 +359,45 @@ function drawWinLine(combo, player){
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 4-LAYER BEAM SYSTEM
-    const layers = [
-      {width: 50 - (progress * 30), blur: 80 - (progress * 50), opacity: 0.9},
-      {width: 32 - (progress * 20), blur: 45 - (progress * 25), opacity: 1.0},
-      {width: 20 - (progress * 12), blur: 25 - (progress * 15), opacity: 0.95},
-      {width: 14 - (progress * 4), blur: 18 - (progress * 8), opacity: 1.0}
-    ];
+    // 🔥 STRONGER MULTI-LAYER BEAM (WITH SOLID CORE)
+    const outerW = 52 - (progress * 34);
+    const midW   = 30 - (progress * 18);
+    const coreW  = 16 - (progress * 6);
 
-    layers.forEach((layer) => {
-      ctx.globalAlpha = layer.opacity;
-      ctx.lineWidth = Math.max(layer.width, 8);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+    // OUTER GLOW
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = player === "X" ? "#00ffff" : "#ff00cc";
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 70 - (progress * 45);
+    ctx.lineWidth = Math.max(outerW, 10);
+    ctx.lineCap = "round";
 
-      const brightColor = player === "X" ? 
-        `rgba(0, 255, 255, ${layer.opacity})` : 
-        `rgba(255, 0, 220, ${layer.opacity})`;
-      
-      ctx.strokeStyle = brightColor;
-      ctx.shadowColor = brightColor;
-      ctx.shadowBlur = Math.max(layer.blur, 12);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(start.x, start.y);
-      ctx.lineTo(end.x, end.y);
-      ctx.stroke();
-    });
+    // MID LAYER
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 35 - (progress * 20);
+    ctx.lineWidth = Math.max(midW, 10);
 
-    ctx.globalAlpha = 1.0;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+
+    // 💥 CORE (THIS FIXES VISIBILITY)
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = Math.max(coreW, 8);
+
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
 
     if (progress < 1) {
       requestAnimationFrame(animateBeam);
