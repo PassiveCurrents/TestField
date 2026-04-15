@@ -96,15 +96,6 @@ body{
   animation: drawPulse 3.2s ease-in-out infinite;
 }
 
-@keyframes drawPulse {
-  0%, 100% { 
-    opacity: 0.92; 
-  }
-  50% { 
-    opacity: 1; 
-  }
-}
-
 /* ===== BOARD ===== */
 #board{
   position:relative;
@@ -121,35 +112,15 @@ body{
     inset 0 0 40px #00f0ff55;
 }
 
-/* NEW: WIN CANVAS */
+/* WIN CANVAS */
 #winCanvas{
   position:absolute;
   top:0;
   left:0;
+  width:100%;
+  height:100%;
+  z-index:10;
   pointer-events:none;
-  z-index:5;
-}
-
-/* FOG */
-#board::before{
-  content:"";
-  position:absolute;
-  top:0;
-  bottom:0;
-  left:-140px;
-  right:-140px;
-  border-radius:50px;
-  pointer-events:none;
-  background:radial-gradient(
-    ellipse at center,
-    rgba(0,240,255,0.35),
-    transparent 70%
-  );
-  animation:sidePulse 2.2s ease-in-out infinite;
-}
-@keyframes sidePulse{
-  0%,100%{ opacity:0.4; transform:scaleX(1); }
-  50%{ opacity:1; transform:scaleX(1.35); }
 }
 
 /* CELLS */
@@ -171,64 +142,26 @@ body{
 .mark{
   font-size:64px;
   font-weight:900;
-  animation:float 2s ease-in-out infinite;
 }
 .x{
   color:#00f0ff;
-  text-shadow:
-    0 0 25px #00f0ff,
-    0 0 60px #00f0ff,
-    0 0 120px #00f0ff;
+  text-shadow:0 0 30px #00f0ff,0 0 80px #00f0ff;
 }
 .o{
   color:#ff00cc;
-  text-shadow:
-    0 0 25px #ff00cc,
-    0 0 60px #ff00cc,
-    0 0 120px #ff00cc;
-}
-@keyframes float{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-10px)}
+  text-shadow:0 0 30px #ff00cc,0 0 80px #ff00cc;
 }
 
-/* RESTART BUTTON */
+/* BUTTON */
 #restart{
   margin-top:40px;
   padding:18px 80px;
   font-size:24px;
   font-weight:900;
-  letter-spacing:3px;
   border:none;
   border-radius:60px;
   cursor:pointer;
   background:linear-gradient(180deg, #d4ff4d, #a6ff00);
-  color:#111;
-  text-shadow:
-    0 1px 0 rgba(255,255,255,0.5),
-    0 2px 4px rgba(0,0,0,0.4);
-  box-shadow:
-    0 0 40px #baff00,
-    0 0 80px #baff00,
-    inset 0 4px 12px rgba(255,255,255,0.7),
-    inset 0 -6px 12px rgba(0,0,0,0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-#restart::before {
-  content: '';
-  position: absolute;
-  inset: -5px;
-  border-radius: 65px;
-  background: linear-gradient(white, rgba(255,255,255,0.65));
-  z-index: -1;
-  filter: blur(8px);
-  opacity: 0.85;
-}
-
-#restart:active{
-  transform:scale(0.93);
 }
 </style>
 </head>
@@ -255,7 +188,7 @@ const left = document.getElementById("left");
 const right = document.getElementById("right");
 const restartBtn = document.getElementById("restart");
 
-/* ===== ADD CANVAS ===== */
+/* CANVAS */
 const canvas = document.createElement("canvas");
 canvas.id = "winCanvas";
 board.appendChild(canvas);
@@ -268,42 +201,7 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-/* ===== SOUND SYSTEM (RESTORED) ===== */
-let audioCtx;
-
-function playSound(freq, duration = 0.1, type = 'sine') {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
-  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-
-  oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  oscillator.start();
-  oscillator.stop(audioCtx.currentTime + duration);
-}
-
-function playPlaceSound(isX) {
-  playSound(isX ? 720 : 540, 0.09, 'triangle');
-}
-
-function playSparkle() {
-  playSound(880, 0.08, 'sine');
-  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
-  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
-}
-
-function playResetSound() {
-  playSound(420, 0.25, 'sine');
-}
-
-/* CREATE GRID */
+/* GRID */
 for(let i = 0; i < 9; i++){
   const c = document.createElement("div");
   c.className = "cell";
@@ -311,64 +209,62 @@ for(let i = 0; i < 9; i++){
   board.appendChild(c);
 }
 
-/* DRAW WIN LINE */
+/* DRAW BEAM */
 function drawWinLine(combo, player){
-  const cells = [...document.querySelectorAll(".cell")];
-
-  const getCenter = (el) => {
-    const r = el.getBoundingClientRect();
-    const br = board.getBoundingClientRect();
-    return {
-      x: r.left - br.left + r.width/2,
-      y: r.top - br.top + r.height/2
-    };
-  };
-
-  const start = getCenter(cells[combo[0]]);
-  const end = getCenter(cells[combo[2]]);
-
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx.lineWidth = 18;
-  ctx.lineCap = "round";
 
   const color = player === "X" ? "#00f0ff" : "#ff00cc";
 
   ctx.strokeStyle = color;
+  ctx.lineWidth = 20;
+  ctx.lineCap = "round";
   ctx.shadowColor = color;
-  ctx.shadowBlur = 35;
+  ctx.shadowBlur = 40;
 
   ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(end.x, end.y);
-  ctx.stroke();
-}
 
-/* UI UPDATE */
-function updateUI(text){
-  left.innerHTML = "";
-  right.innerHTML = "";
-  left.className = "side";
-  right.className = "side";
+  const w = canvas.width;
+  const h = canvas.height;
 
-  if(text === "DRAW"){
-    left.innerHTML = `<span class="draw">DRAW</span>`;
-    right.innerHTML = `<span class="draw">DRAW</span>`;
-    return;
+  // HORIZONTAL
+  if(combo[0] === 0 && combo[2] === 2){
+    ctx.moveTo(40, h/6);
+    ctx.lineTo(w-40, h/6);
+  }
+  else if(combo[0] === 3 && combo[2] === 5){
+    ctx.moveTo(40, h/2);
+    ctx.lineTo(w-40, h/2);
+  }
+  else if(combo[0] === 6 && combo[2] === 8){
+    ctx.moveTo(40, h*5/6);
+    ctx.lineTo(w-40, h*5/6);
   }
 
-  const cleanText = text.replace("X","").replace("O","").trim();
-  const symbol = current === "X" ? "X" : "O";
+  // VERTICAL
+  else if(combo[0] === 0 && combo[2] === 6){
+    ctx.moveTo(w/6, 40);
+    ctx.lineTo(w/6, h-40);
+  }
+  else if(combo[0] === 1 && combo[2] === 7){
+    ctx.moveTo(w/2, 40);
+    ctx.lineTo(w/2, h-40);
+  }
+  else if(combo[0] === 2 && combo[2] === 8){
+    ctx.moveTo(w*5/6, 40);
+    ctx.lineTo(w*5/6, h-40);
+  }
 
-  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
-  const target = isLeft ? left : right;
+  // DIAGONALS
+  else if(combo[0] === 0 && combo[2] === 8){
+    ctx.moveTo(40, 40);
+    ctx.lineTo(w-40, h-40);
+  }
+  else if(combo[0] === 2 && combo[2] === 6){
+    ctx.moveTo(w-40, 40);
+    ctx.lineTo(40, h-40);
+  }
 
-  target.innerHTML = `
-    <span class="symbol">${symbol}</span>
-    <span class="label">${cleanText}</span>
-  `;
-
-  target.classList.add("metal");
+  ctx.stroke();
 }
 
 /* CLICK */
@@ -386,14 +282,11 @@ board.onclick = e => {
   m.textContent = current;
   cell.appendChild(m);
 
-  playPlaceSound(current === "X");
-
   const win = checkWin();
 
   if(win){
     gameOver = true;
-    playSparkle();
-    drawWinLine(win, current); // NEW
+    drawWinLine(win, current);
     updateUI(current + " WINS");
     return;
   }
@@ -423,18 +316,22 @@ function checkWin(){
   );
 }
 
+/* UI */
+function updateUI(text){
+  left.innerHTML = text;
+  right.innerHTML = text;
+}
+
 /* RESET */
 restartBtn.onclick = () => {
   boardState = Array(9).fill(null);
   current = "X";
   gameOver = false;
-  swap = !swap;
 
   document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0,0,canvas.width,canvas.height); // CLEAR LINE
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
   updateUI("X TURN");
-  playResetSound();
 };
 
 updateUI("X TURN");
