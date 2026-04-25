@@ -626,118 +626,114 @@ body.env-grabbing { cursor: grabbing; }
 
 /* --- MICRO TUNING END: identity clarity CSS --- */
 
-/* --- NEW: room3D wrapper + adLayer structure --- */
-#room3D {
+/* ============================================================
+   CAMERA SYSTEM — correct 3D separation
+   #camera   = perspective container (fixed, full viewport)
+   #room3D   = 3D world inside camera (NO perspective, only preserve-3d)
+   #adLayer  = zero-size anchor at viewport center
+   #gameUI   = completely outside camera, flat, untouched by 3D
+   ============================================================ */
+
+#camera {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
   perspective: 1200px;
-  transform-style: preserve-3d;
-  pointer-events: none;
+  overflow: hidden;
   z-index: 1;
+  pointer-events: none;   /* never intercepts game clicks */
 }
 
+#room3D {
+  position: absolute;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  /* NO perspective property here — only #camera owns perspective */
+}
+
+/* Zero-size anchor at exact viewport centre — panels rotate around this point */
 #adLayer {
   position: absolute;
-  inset: 0;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
   transform-style: preserve-3d;
-  transform: rotateX(5deg);
 }
 
-/* Ad screens — shared base style */
+/* Base panel style — centered on anchor via negative margin */
 .adScreen {
   position: absolute;
+  width: 300px;
+  height: 180px;
+  margin-left: -150px;   /* half width  → centres panel on anchor */
+  margin-top:  -90px;    /* half height → centres panel on anchor */
   border-radius: 12px;
-  background: rgba(20, 20, 30, 0.6);
-  border: 2px solid rgba(0, 255, 255, 0.4);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  /* Subtle breathing pulse — each screen offset slightly for variety */
-  animation: adBreath 4s ease-in-out infinite;
+  background: rgba(255, 0, 0, 0.25);
+  border: 2px solid red;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+  /* always visible — no per-frame opacity tricks */
+  pointer-events: none;  /* NEVER intercept game clicks */
+  z-index: 0;            /* always behind gameUI (z-index:10) */
+  opacity: 1;
+  filter: none;
+  scale: 1;
 }
 
-/* Pink-tinted screens (ad2, ad5, ad7) */
-#ad2, #ad5, #ad7 {
-  border-color: rgba(255, 0, 204, 0.55);
-  box-shadow:
-    0 0 8px  rgba(255, 0, 204, 0.45),
-    0 0 22px rgba(255, 0, 204, 0.20),
-    inset 0 0 10px rgba(255, 0, 204, 0.08);
+/* .front kept for future use; no visual effect right now */
+.adScreen.front {}
+
+/* --- FIXED WORLD-SPACE PANEL POSITIONS ---
+   Panels are children of #room3D. When #room3D rotates, they orbit
+   around the viewer exactly like wall objects in a circular room.
+   They are NEVER repositioned by JS — pure CSS static transforms.
+   Z=1500px = outer wall radius.
+   translateY = dramatic vertical spread so panels sit at distinct heights. */
+#ad1 { transform: rotateY(  0deg) translateZ(1500px) translateY(-300px); }
+#ad2 { transform: rotateY( 51deg) translateZ(1500px) translateY(-150px); }
+#ad3 { transform: rotateY(103deg) translateZ(1500px) translateY(   0px); }
+#ad4 { transform: rotateY(154deg) translateZ(1500px) translateY( 150px); }
+#ad5 { transform: rotateY(206deg) translateZ(1500px) translateY( 300px); }
+#ad6 { transform: rotateY(257deg) translateZ(1500px) translateY(-450px); }
+#ad7 { transform: rotateY(309deg) translateZ(1500px) translateY( 450px); }
+
+/* gameUI — completely outside #camera, fully flat, untouched by 3D */
+#gameUI {
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
 }
 
-/* Gold-tinted screen (ad6 — center back feature screen) */
-#ad6 {
-  border-color: rgba(255, 215, 0, 0.50);
-  box-shadow:
-    0 0 8px  rgba(255, 215, 0, 0.40),
-    0 0 22px rgba(255, 215, 0, 0.18),
-    inset 0 0 10px rgba(255, 215, 0, 0.07);
-}
-
+/* Keep adBreath keyframe for later use */
 @keyframes adBreath {
   0%, 100% { opacity: 0.72; }
   50%       { opacity: 0.88; }
 }
 
-/* Animation offsets so screens don't all pulse together */
-#ad1 { animation-delay: 0s;    }
-#ad2 { animation-delay: 0.6s;  }
-#ad3 { animation-delay: 1.2s;  }
-#ad4 { animation-delay: 1.8s;  }
-#ad5 { animation-delay: 0.9s;  }
-#ad6 { animation-delay: 2.4s;  }
-#ad7 { animation-delay: 0.3s;  }
-
-/* UPPER LAYER — 4 screens */
-#ad1 {  /* front-left:  neg X, slight neg Z */
-  width: 300px; height: 170px;
-  top: 50%; left: 50%;
-  transform: translate3d(-540px, -160px, -180px);
-}
-#ad2 {  /* front-right: pos X, slight neg Z */
-  width: 310px; height: 165px;
-  top: 50%; left: 50%;
-  transform: translate3d( 240px, -155px, -180px);
-}
-#ad3 {  /* far-left:  more neg X, deeper Z */
-  width: 280px; height: 155px;
-  top: 50%; left: 50%;
-  transform: translate3d(-700px, -100px, -520px);
-}
-#ad4 {  /* far-right: more pos X, deeper Z */
-  width: 285px; height: 150px;
-  top: 50%; left: 50%;
-  transform: translate3d( 420px, -95px,  -520px);
-}
-
-/* LOWER LAYER — 3 screens */
-#ad5 {  /* left bottom */
-  width: 265px; height: 145px;
-  top: 50%; left: 50%;
-  transform: translate3d(-620px, 120px, -340px);
-}
-#ad6 {  /* center back — deepest Z, wider */
-  width: 340px; height: 200px;
-  top: 50%; left: 50%;
-  transform: translate3d(-170px, 180px, -780px);
-}
-#ad7 {  /* right bottom */
-  width: 260px; height: 142px;
-  top: 50%; left: 50%;
-  transform: translate3d( 360px, 125px, -340px);
-}
-/* --- END: room3D structure --- */
-
 </style>
 </head>
 <body>
 
-<!-- NEW: 3D room wrapper — sits behind everything, pointer-events:none -->
-<div id="room3D">
-  <div id="adLayer">
-    <!-- 7 floating ad screens will be placed here -->
+<div id="camera">
+  <!-- 3D WORLD — panels ring around viewer, independent of game UI -->
+  <div id="room3D">
+    <div id="adLayer">
+      <div class="adScreen" id="ad1" data-angle="0"></div>
+      <div class="adScreen" id="ad2" data-angle="51"></div>
+      <div class="adScreen" id="ad3" data-angle="103"></div>
+      <div class="adScreen" id="ad4" data-angle="154"></div>
+      <div class="adScreen" id="ad5" data-angle="206"></div>
+      <div class="adScreen" id="ad6" data-angle="257"></div>
+      <div class="adScreen" id="ad7" data-angle="309"></div>
+    </div>
   </div>
-</div>
+</div><!-- end #camera -->
+
+<!-- GAME UI — sibling of camera, completely outside 3D space -->
+<div id="gameUI">
 
 <!-- ===== TITLE ===== -->
 <div id="title">
@@ -1002,6 +998,8 @@ body.env-grabbing { cursor: grabbing; }
   <div id="statusCount">1 ░▒▓ SIGNAL</div>
 </div>
 <!-- --- NEW CODE END: ONLINE STATUS HUD --- -->
+
+</div><!-- end #gameUI -->
 
 <script>
 // ============================================================
@@ -2230,13 +2228,51 @@ updateUI();
   });
 
   let lastT=0;
+  // --- CSS 3D PANELS: grab #room3D so we can rotate it in sync with envGroup ---
+  const cssRoom3D = document.getElementById('room3D');
+
   function envRender(now){
     requestAnimationFrame(envRender);
     const dt=Math.min((now-lastT)/1000,.05); lastT=now;
     envAutoYaw+=.00018;
     if(!isDraggingEnv){dragVelX*=.88;dragVelY*=.88;dragYaw-=dragVelX*.0015;dragPitch+=dragVelY*.0015;}
+
+    // Three.js world rotation (WebGL prison cage + particles)
     envGroup.rotation.y=envAutoYaw+dragYaw;
     envGroup.rotation.x=dragPitch;
+
+    // Mirror SAME rotation to CSS #room3D so ad panels move with the environment.
+    // rotateY then rotateX matches Three.js Euler order YXZ.
+    // Using radians directly — no conversion needed.
+    if(cssRoom3D){
+      const yaw   = (envAutoYaw + dragYaw).toFixed(5);
+      const pitch  = dragPitch.toFixed(5);
+      cssRoom3D.style.transform = `rotateY(${yaw}rad) rotateX(${pitch}rad)`;
+    }
+
+    // --- PANEL ANCHORING: no per-frame JS position updates ---
+    // Panels are fixed world-space objects. Their transforms are pure CSS.
+    // #room3D rotation (above) is the ONLY thing that moves them — like
+    // real objects attached to a rotating cylindrical room wall.
+    // The cosFactor opacity/filter/scale writes have been neutralised here
+    // so inline styles no longer override the CSS. .front class is still
+    // toggled in case future content needs it, but has no visual effect now.
+    const RAD = Math.PI / 180;
+    const yawDeg = (envAutoYaw + dragYaw) * (180 / Math.PI);
+    document.querySelectorAll('.adScreen').forEach(p => {
+      const panelAngle = parseFloat(p.dataset.angle) || 0;
+      let diff = ((panelAngle - yawDeg) % 360 + 540) % 360 - 180;
+      const cosFactor = (Math.cos(diff * RAD) + 1) / 2;
+      // Inline style writes removed — CSS owns opacity/filter/scale completely.
+      // p.style.opacity and p.style.filter intentionally cleared so CSS wins.
+      p.style.opacity = '';
+      p.style.filter  = '';
+      p.style.scale   = '';
+      if(cosFactor > 0.72) p.classList.add('front');
+      else                  p.classList.remove('front');
+    });
+    // --- END PANEL ANCHORING ---
+
     updateParticles(dt);
     renderer.render(scene,camera);
   }
