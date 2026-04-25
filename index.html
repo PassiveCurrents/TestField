@@ -1,507 +1,2247 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>X/O CLASH</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
-body{
-  margin:0;
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  background:radial-gradient(circle,#2a0040,#000);
-  font-family:sans-serif;
-  color:white;
-  overflow:hidden;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
-/* ===== TITLE ===== */
-#title{
-  font-size:77px;
-  font-weight:900;
-  margin-bottom:20px;
-  background:linear-gradient(45deg,#00f0ff,#ff00cc,#baff00,#00f0ff);
-  background-size:400%;
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  animation:shine 6s linear infinite;
-  text-shadow:0 0 30px #fff;
-}
-@keyframes shine{
-  0%{background-position:0%}
-  100%{background-position:400%}
-}
-
-/* ===== LAYOUT ===== */
-#game{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:220px;
-}
-
-/* SIDE STATUS */
-.side{
-  width:220px;
-  text-align:center;
-  font-size:48px;
-  font-weight:900;
-  letter-spacing:2px;
-  white-space:nowrap;
-  margin-left: -68px;
+body {
+  margin: 0;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 38%, #2a0040 0%, #0c0018 65%, #000 100%);
+  font-family: 'Arial Black', Impact, sans-serif;
+  color: white;
+  overflow: hidden;
+  user-select: none;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,240,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,0.025) 1px, transparent 1px);
+  background-size: 52px 52px;
+  pointer-events: none;
+  z-index: 0;
+  animation: gridDrift 28s linear infinite;
+}
+@keyframes gridDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 52px 52px; }
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%,   rgba(0,240,255,0.09)  0%, transparent 32%),
+    radial-gradient(circle at 100% 0%,  rgba(255,0,204,0.07)  0%, transparent 32%),
+    radial-gradient(circle at 0% 100%,  rgba(255,0,204,0.06)  0%, transparent 30%),
+    radial-gradient(circle at 100% 100%, rgba(0,240,255,0.07)  0%, transparent 30%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ===== TITLE ===== */
+#title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 5;
+  line-height: 1;
+}
+
+#clashText {
+  font-size: 77px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(45deg, #00f0ff, #ff00cc, #baff00, #00f0ff);
+  background-size: 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shine 6s linear infinite;
+  line-height: 1;
+}
+@keyframes shine { 0%{background-position:0%} 100%{background-position:400%} }
+
+@keyframes pinkPulse  { 0%,100%{opacity:.78} 50%{opacity:1} }
+@keyframes cyanPulse  { 0%,100%{opacity:1}   50%{opacity:.78} }
+@keyframes goldPulse  { 0%,100%{opacity:.82} 50%{opacity:1} }
+@keyframes debrisSpark {
+  0%,100%{opacity:.5;transform:translate(0,0) scale(1)}
+  33%{opacity:.9;transform:translate(-1px,-2px) scale(1.1)}
+  66%{opacity:.3;transform:translate(1px,1px) scale(.9)}
+}
+
+/* ===== GAME LAYOUT ===== */
+#game {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  position: relative;
+  z-index: 5;
+}
+
+/* ===== PLAYER SIDES ===== */
+.side {
+  width: 148px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.side .sym { font-size: 78px; font-weight: 900; line-height: 1; display: block; }
+.side.x-player .sym {
+  color: #00f0ff;
+  text-shadow: 0 0 5px #fff, 0 0 16px #00f0ff, 0 0 42px #00f0ff, 0 0 78px #00f0ff;
+}
+.side.o-player .sym {
+  color: #ff00cc;
+  text-shadow: 0 0 5px #fff, 0 0 16px #ff00cc, 0 0 42px #ff00cc, 0 0 78px #ff00cc;
+}
+.side .score-num { font-size: 27px; font-weight: 900; opacity: 0.55; letter-spacing: 1px; line-height: 1; display: block; }
+.side .status { font-size: 17px; font-weight: 900; letter-spacing: 3px; min-height: 22px; line-height: 1; display: block; }
+.side.active .sym    { animation: sidePop 0.95s ease-in-out infinite; }
+.side.active .status { color: #baff00; text-shadow: 0 0 10px #baff00, 0 0 22px #baff00; }
+@keyframes sidePop   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.09)} }
+.side.winner .sym    { animation: winBounce 0.3s ease-in-out 5; }
+@keyframes winBounce { 0%,100%{transform:scale(1) rotate(0)} 50%{transform:scale(1.22) rotate(5deg)} }
+.side.winner .status {
+  color:#baff00; font-size:22px;
+  text-shadow:0 0 10px #baff00,0 0 26px #baff00;
+  animation:winFlash 0.75s ease-in-out infinite;
+}
+@keyframes winFlash  { 0%,100%{opacity:.78;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
+
+/* ===== MODE BADGES ===== */
+.mode-badge { font-size: 11px; font-weight: 900; letter-spacing: 2px; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-top: 2px; }
+.you-badge  { background: rgba(186,255,0,.15); color: #baff00; border: 1px solid rgba(186,255,0,.5); }
+.cpu-badge  { background: rgba(255,0,204,.12); color: #ff00cc; border: 1px solid rgba(255,0,204,.4); }
+.opp-badge  { background: rgba(255,255,255,.06); color: #aaffff; border: 1px solid rgba(0,240,255,.3); }
+
+/* ===== DRAW ===== */
+.side.draw-mode { justify-content: center; }
+.drawBig {
+  color: #ff0033; font-size: 90px; font-weight: 900; letter-spacing: 2px; line-height: 1;
+  text-shadow: 0 0 10px #fff, 0 0 25px #fff, 0 0 20px #ff0033, 0 0 45px #ff0033, 0 0 90px #ff0033;
+  animation: drawPulse 3.2s ease-in-out infinite; display: block;
+}
+@keyframes drawPulse { 0%,100%{opacity:.88;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
+
+/* ===== BOARD ===== */
+#board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 90px);
+  gap: 12px; padding: 20px; border-radius: 46px;
+  background: #20003a;
+  border: 24px solid #00f0ff;
+  box-shadow: 0 0 80px #00f0ff, 0 0 160px #00f0ff44, inset 0 0 40px #00f0ff44;
+  animation: boardBreath 2.4s ease-in-out infinite;
+  will-change: transform;
+  z-index: 1;
+}
+@keyframes boardBreath {
+  0%,100% { box-shadow: 0 0 80px #00f0ff, 0 0 150px #00f0ff44, inset 0 0 40px #00f0ff44; }
+  50%     { box-shadow: 0 0 140px #00f0ff, 0 0 260px #00f0ff66, inset 0 0 75px #00f0ff66; }
+}
+#board::before {
+  content: ''; position: absolute; inset: -60px; border-radius: 90px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0,240,255,0.11), transparent 70%);
+  animation: boardFog 2.4s ease-in-out infinite; z-index: -1;
+}
+@keyframes boardFog { 0%,100%{opacity:.5;transform:scaleX(1)} 50%{opacity:1;transform:scaleX(1.28)} }
+
+#scanlines {
+  position: absolute; inset: 0; border-radius: 22px;
+  pointer-events: none; z-index: 7; overflow: hidden;
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,240,255,0.018) 3px, rgba(0,240,255,0.018) 4px);
+}
+#scanlines::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,240,255,0.03) 48%, rgba(0,240,255,0.07) 50%, rgba(0,240,255,0.03) 52%, transparent 100%);
+  animation: holoSweep 6s ease-in-out infinite;
+}
+@keyframes holoSweep {
+  0%{transform:translateY(-100%);opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{transform:translateY(100%);opacity:0}
+}
+
+#winCanvas { position: absolute; top:0; left:0; pointer-events: none; z-index: 5; }
+
+/* ===== CELLS ===== */
+.cell {
+  width: 90px; height: 90px; border-radius: 28px;
+  background: linear-gradient(145deg, #3d0068, #27004a);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: visible;
+  box-shadow: inset 0 0 22px #00000099, inset 0 2px 4px #ffffff12, 0 0 8px #00000044;
+  transition: background 0.15s ease;
+}
+.cell:hover { background: linear-gradient(145deg, #4e0088, #380062); }
+
+/* ===== MARKS ===== */
+.mark { font-size: 68px; font-weight: 900; z-index: 2; position: relative; }
+.x { color:#00f0ff; text-shadow:0 0 6px #fff,0 0 22px #00f0ff,0 0 55px #00f0ff,0 0 110px #00f0ff; }
+.o { color:#ff00cc; text-shadow:0 0 6px #fff,0 0 22px #ff00cc,0 0 55px #ff00cc,0 0 110px #ff00cc; }
+@keyframes popIn {
+  0%{transform:scale(0) rotate(-22deg);opacity:0}
+  60%{transform:scale(1.18) rotate(4deg);opacity:1}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+@keyframes floatMark { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-9px) scale(1.04)} }
+
+/* ===== RESTART ===== */
+#restart {
+  margin-top: 32px; padding: 16px 72px;
+  font-size: 22px; font-weight: 900; letter-spacing: 3px;
+  border: none; border-radius: 60px; cursor: pointer;
+  background: linear-gradient(180deg, #d4ff4d, #a6ff00); color: #111;
+  box-shadow: 0 0 38px #baff00aa, 0 0 75px #baff0055,
+    inset 0 4px 12px rgba(255,255,255,0.65), inset 0 -5px 10px rgba(0,0,0,0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  position: relative; z-index: 5;
+}
+#restart:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 55px #baff00cc, 0 0 110px #baff0077,
+    inset 0 4px 12px rgba(255,255,255,0.65), inset 0 -5px 10px rgba(0,0,0,0.25);
+}
+#restart:active { transform: scale(0.93); }
+
+/* ===== ROUND DISPLAY ===== */
+#roundDisplay {
+  margin-top: 14px; position: relative; z-index: 5; text-align: center; display: none;
+}
+#roundText { font-size: 15px; font-weight: 900; letter-spacing: 4px; color: #00f0ff; opacity: 0.65; text-shadow: 0 0 10px #00f0ff; }
+
+/* --- POLISH START: UI JUICE & ANIMATIONS --- */
+
+/* === Richer cell hover + press feel === */
+.cell {
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+.cell:hover:not(.blocked) {
+  background: linear-gradient(145deg, #52009a, #3c0070) !important;
+  box-shadow: inset 0 0 22px #00000099, 0 0 18px rgba(0,240,255,0.35), inset 0 2px 4px #ffffff18 !important;
+  transform: scale(1.06);
+}
+.cell:active {
+  transform: scale(0.93) !important;
+  transition: transform 0.07s ease;
+}
+
+/* === WINNING cell — glowing pulse + scale emphasis === */
+.cell.win-cell {
+  animation: winCellPulse 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes winCellPulse {
+  0%   { transform: scale(1);    box-shadow: inset 0 0 22px #00000099; }
+  30%  { transform: scale(1.14); box-shadow: 0 0 40px var(--win-color, #00f0ff), 0 0 80px var(--win-color, #00f0ff); }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1.1);  box-shadow: 0 0 28px var(--win-color, #00f0ff), 0 0 50px var(--win-color, #00f0ff); }
+}
+.cell.win-cell .mark {
+  animation: winMarkPop 0.5s cubic-bezier(0.175,0.885,0.32,2) forwards !important;
+}
+@keyframes winMarkPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.28) rotate(8deg); }
+  100% { transform: scale(1.18) rotate(0deg); }
+}
+
+/* === DRAW cell — cool desaturated pulse === */
+.cell.draw-cell {
+  animation: drawCellFade 0.8s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes drawCellFade {
+  0%   { filter: none; transform: scale(1); }
+  40%  { filter: brightness(0.6) saturate(0.3); transform: scale(0.95); }
+  100% { filter: brightness(0.75) saturate(0.4); transform: scale(0.97); }
+}
+
+/* === BOARD win flash overlay === */
+#board.board-flash {
+  animation: boardFlash 0.45s ease-out;
+}
+@keyframes boardFlash {
+  0%   { filter: none; }
+  18%  { filter: brightness(2.2) saturate(1.8); }
+  55%  { filter: brightness(1.3) saturate(1.2); }
+  100% { filter: none; }
+}
+
+/* === DRAW board pulse (softer) === */
+#board.board-draw-pulse {
+  animation: boardDrawPulse 0.7s ease-out;
+}
+@keyframes boardDrawPulse {
+  0%   { filter: none; }
+  35%  { filter: brightness(0.6) saturate(0.2) hue-rotate(180deg); }
+  100% { filter: none; }
+}
+
+/* === Screen overlays: fade in smoothly === */
+.screen-overlay.active {
+  animation: screenFadeIn 0.35s ease-out both;
+}
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.mode-inner {
+  animation: innerSlideUp 0.38s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+@keyframes innerSlideUp {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === AI thinking: board gets a subtle "processing" shimmer === */
+#board.ai-thinking {
+  border-color: rgba(0,240,255,0.45);
+  box-shadow: 0 0 40px rgba(0,240,255,0.25), 0 0 80px rgba(0,240,255,0.12), inset 0 0 20px rgba(0,240,255,0.2);
+  animation: aiThinkShimmer 0.9s ease-in-out infinite, boardBreath 2.4s ease-in-out infinite;
+}
+@keyframes aiThinkShimmer {
+  0%,100% { border-color: rgba(0,240,255,0.45); }
+  50%     { border-color: rgba(255,0,204,0.55); }
+}
+
+/* === TURN label — extra pop when it's your turn === */
+.side.active .sym {
+  animation: sidePop 0.95s ease-in-out infinite, activeGlowPulse 1.4s ease-in-out infinite;
+}
+@keyframes activeGlowPulse {
+  0%,100% { filter: drop-shadow(0 0 8px currentColor); }
+  50%     { filter: drop-shadow(0 0 22px currentColor) drop-shadow(0 0 40px currentColor); }
+}
+
+/* === SCOREBOARD row above board === */
+#scoreBar {
+  display: none;                /* shown by JS when game starts */
+  position: relative; z-index: 5;
+  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 28px; font-size: 13px; font-weight: 900;
+  letter-spacing: 2px;
+  opacity: 0.7;
+}
+#scoreBar .sb-x { color: #00f0ff; text-shadow: 0 0 8px #00f0ff; }
+#scoreBar .sb-sep { color: rgba(255,255,255,0.3); }
+#scoreBar .sb-o  { color: #ff00cc; text-shadow: 0 0 8px #ff00cc; }
+#scoreBar .sb-round { color: rgba(255,255,255,0.45); font-size: 11px; letter-spacing: 3px; }
+
+/* --- POLISH END: UI JUICE & ANIMATIONS --- */
+
+/* ===== CHAOS CANVAS ===== */
+#chaosCanvas { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 999; }
+
+/* ===== 3D ENV CANVAS ===== */
+#envCanvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index: 2; pointer-events: none; }
+
+/* ===== GLITCH WAVE CANVAS ===== */
+#glitchWaveCanvas { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 998; }
+
+/* ===== DRAG CURSOR ===== */
+body.env-grabbing { cursor: grabbing; }
+
+/* ============================================================
+   GAME MODE SCREENS
+   z-index 2000 = above everything including glitch canvas (998)
+   and chaos canvas (999)
+   ============================================================ */
+.screen-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  align-items: center; justify-content: center;
+  z-index: 2000;
+  background: rgba(4, 0, 18, 0.96);
+  pointer-events: all;
+}
+.screen-overlay.active { display: flex; }
+
+.mode-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 26px; text-align: center;
+  padding: 44px 52px;
+  border: 2px solid rgba(0,240,255,0.45);
+  border-radius: 32px;
+  background: linear-gradient(160deg, #110022ee, #04000eee);
+  box-shadow: 0 0 60px rgba(0,240,255,0.18), inset 0 0 30px rgba(0,240,255,0.05);
+  max-width: 92vw;
+  pointer-events: all;
+}
+
+.mode-title {
+  font-size: 50px; font-weight: 900; letter-spacing: 5px; line-height: 1.18;
+  color: #00f0ff; /* solid fallback */
+  background: linear-gradient(45deg, #00f0ff, #ff00cc, #baff00, #00f0ff);
+  background-size: 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shine 5s linear infinite;
+}
+
+.mode-buttons { display: flex; gap: 20px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+
+.mode-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 20px 28px; min-width: 160px;
+  border: 2px solid rgba(0,240,255,0.55);
+  border-radius: 22px; cursor: pointer;
+  background: rgba(0, 15, 35, 0.92);
+  color: #cceeff;
+  font-family: 'Arial Black', Impact, sans-serif;
+  transition: all 0.18s ease;
+  box-shadow: 0 0 18px rgba(0,240,255,0.1);
+  pointer-events: all;
+}
+.mode-btn:hover { border-color: #00f0ff; background: rgba(0, 40, 70, 0.96); transform: scale(1.06); color: #fff; box-shadow: 0 0 40px rgba(0,240,255,0.4); }
+.mode-btn:active { transform: scale(0.95); }
+.mode-btn-icon  { font-size: 34px; line-height: 1; }
+.mode-btn-label { font-size: 20px; font-weight: 900; letter-spacing: 3px; color: #00f0ff; }
+.mode-btn-sub   { font-size: 11px; opacity: 0.55; letter-spacing: 1px; }
+
+/* Lobby extras */
+.lobby-label  { font-size: 12px; letter-spacing: 3px; opacity: 0.5; color: #aaffff; }
+.lobby-status { font-size: 15px; letter-spacing: 2px; color: #aaffff; min-height: 22px; }
+.room-code {
+  font-size: 24px; font-weight: 900; letter-spacing: 6px; color: #baff00;
+  text-shadow: 0 0 14px #baff00;
+  background: rgba(186,255,0,0.08); padding: 12px 28px; border-radius: 14px;
+  border: 1px solid rgba(186,255,0,0.35);
+}
+.lobby-hint  { font-size: 11px; opacity: 0.4; color: #aaffff; }
+.waiting-msg { font-size: 14px; color: #00f0ff; letter-spacing: 2px; animation: drawPulse 2s ease-in-out infinite; }
+.waiting-dot::before { content:'●'; margin-right:6px; animation: drawPulse 1s ease-in-out infinite; }
+.code-input {
+  width: 260px; padding: 14px 20px; border-radius: 14px;
+  border: 2px solid rgba(0,240,255,0.35); background: #020010;
+  color: white; font-size: 18px; font-family: monospace; letter-spacing: 4px;
+  text-align: center; outline: none;
+}
+.code-input:focus { border-color: #00f0ff; }
+.lobby-or { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.or-text  { font-size: 18px; font-weight: 900; opacity: 0.45; color: white; }
+
+.match-result { font-size: 30px; font-weight: 900; letter-spacing: 3px; line-height: 1.3; color: white; }
+
+/* Back button */
+#backBtn {
+  display: none;
+  position: fixed; bottom: 28px; left: 28px; z-index: 2001;
+  padding: 12px 26px; border: 2px solid rgba(0,240,255,0.45); border-radius: 40px;
+  background: rgba(2,0,16,0.9); color: #00f0ff;
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: 14px; font-weight: 900; letter-spacing: 2px; cursor: pointer;
+  box-shadow: 0 0 20px rgba(0,240,255,0.18);
+  pointer-events: all;
+}
+#backBtn:hover { border-color: #00f0ff; background: rgba(0,40,70,0.92); }
+
+/* --- NEW CODE START: ONLINE STATUS HUD ---
+   Completely isolated UI element — no connection to game logic whatsoever.
+   CSS-driven glitch animation. Simulated player count only.
+   ---------------------------------------------------------- */
+#statusHUD {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2001;            /* above everything */
+  pointer-events: none;     /* never intercept clicks */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
 }
 
-/* SYMBOL ABOVE TEXT */
-.side .symbol {
-  font-size: 82px;
-  font-weight: 900;
-  line-height: 1;
-  color: #ffffff;
-  text-shadow:
-    0 0 12px #ffffff,
-    0 0 28px #d0f0ff,
-    0 0 50px #ffffff;
-}
+/* --- STYLE UPDATE START: metallic silver/white status HUD --- */
 
-/* TEXT UNDER SYMBOL */
-.side .label {
-  display:block;
-}
-
-/* METAL TEXT */
-.metal{
-  color:#fff;
-  text-shadow:
-    0 0 10px #fff,
-    0 0 25px #fff,
-    0 0 50px #fff;
-}
-
-/* DRAW TEXT */
-.draw{
-  color:#ff0033;
-  font-size:90px;
-  text-shadow:
-    0 0 10px #ffffff,
-    0 0 25px #ffffff,
-    0 0 20px #ff0033,
-    0 0 40px #ff0033,
-    0 0 80px #ff0033;
-  animation: drawPulse 3.2s ease-in-out infinite;
-}
-
-@keyframes drawPulse {
-  0%, 100% { 
-    opacity: 0.92; 
-  }
-  50% { 
-    opacity: 1; 
-  }
-}
-
-/* ===== BOARD ===== */
-#board{
-  position:relative;
-  display:grid;
-  grid-template-columns:repeat(3,86px);
-  gap:12px;
-  padding:20px;
-  border-radius:50px;
-  background:#20003a;
-  border:24px solid #00f0ff;
+/* Signal dot — pearl white with soft glow */
+#statusDot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #c8d8e8 55%, #8fa8be);
   box-shadow:
-    0 0 80px #00f0ff,
-    0 0 150px #00f0ff,
-    inset 0 0 40px #00f0ff55;
+    0 0 5px rgba(255,255,255,0.90),
+    0 0 12px rgba(220,235,255,0.55),
+    0 0 22px rgba(180,210,255,0.22);
+  align-self: flex-end;
+  animation: dotBlink 2s ease-in-out infinite;
+}
+@keyframes dotBlink {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.18;transform:scale(.55)}
 }
 
-/* WIN CANVAS - PERFECTLY POSITIONED */
-#winCanvas{
-  position:absolute;
-  top:20px;  /* MATCH PADDING */
-  left:20px; /* MATCH PADDING */
-  width: calc(100% - 40px); /* ACCOUNT FOR PADDING */
-  height: calc(100% - 40px); /* ACCOUNT FOR PADDING */
-  pointer-events:none;
-  z-index:10;
+/* Alien text line — polished metal gradient + warm white glow */
+#statusAlien {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  /* gradient text: bright highlight → white → silver → slightly warm silver */
+  background: linear-gradient(
+    180deg,
+    #f0f4ff 0%,
+    #ffffff 25%,
+    #d0dae8 55%,
+    #a8b8cc 80%,
+    #ccd8e8 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* soft premium glow — not neon, just sheen */
+  filter:
+    drop-shadow(0 0 3px rgba(255,255,255,0.68))
+    drop-shadow(0 0 7px rgba(210,225,255,0.32));
+  position: relative; /* needed for shimmer ::after */
+  animation: alienFlicker 6s ease-in-out infinite;
+  white-space: nowrap;
 }
-
-/* FOG */
-#board::before{
-  content:"";
-  position:absolute;
-  top:0;
-  bottom:0;
-  left:-140px;
-  right:-140px;
-  border-radius:50px;
-  pointer-events:none;
-  background:radial-gradient(
-    ellipse at center,
-    rgba(0,240,255,0.35),
+/* Shimmer highlight sweep across alien text */
+#statusAlien::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.18) 48%,
+    rgba(255,255,255,0.30) 50%,
+    rgba(255,255,255,0.18) 52%,
     transparent 70%
   );
-  animation:sidePulse 2.2s ease-in-out infinite;
+  background-size: 200% 100%;
+  background-position: 160% 0;
+  animation: metalShimmer 6s ease-in-out infinite 2.5s;
+  pointer-events: none; border-radius: 2px;
 }
-@keyframes sidePulse{
-  0%,100%{ opacity:0.4; transform:scaleX(1); }
-  50%{ opacity:1; transform:scaleX(1.35); }
+@keyframes metalShimmer {
+  0%,100%  { background-position: 160% 0; opacity: 0; }
+  5%       { opacity: 1; }
+  50%      { background-position: -60% 0; opacity: 1; }
+  65%,100% { background-position: -60% 0; opacity: 0; }
 }
-
-/* CELLS */
-.cell{
-  width:86px;
-  height:86px;
-  border-radius:30px;
-  background:#3a0060;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:
-    inset 0 0 25px #000,
-    0 0 15px #000,
-    inset 0 0 20px #ffffff22;
-}
-
-/* MARKS */
-.mark{
-  font-size:64px;
-  font-weight:900;
-  animation:float 2s ease-in-out infinite;
-}
-.x{
-  color:#00f0ff;
-  text-shadow:
-    0 0 25px #00f0ff,
-    0 0 60px #00f0ff,
-    0 0 120px #00f0ff;
-}
-.o{
-  color:#ff00cc;
-  text-shadow:
-    0 0 25px #ff00cc,
-    0 0 60px #ff00cc,
-    0 0 120px #ff00cc;
-}
-@keyframes float{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-10px)}
+@keyframes alienFlicker {
+  0%,100%  { opacity:.82; transform:translateX(0); filter:drop-shadow(0 0 3px rgba(255,255,255,0.68)) drop-shadow(0 0 7px rgba(210,225,255,0.32)); }
+  92%      { opacity:.82; transform:translateX(0); filter:drop-shadow(0 0 3px rgba(255,255,255,0.68)) drop-shadow(0 0 7px rgba(210,225,255,0.32)); }
+  93%      { opacity:.30; transform:translateX(-3px); filter:hue-rotate(120deg) brightness(1.8); }
+  94%      { opacity:.92; transform:translateX(2px);  filter:hue-rotate(-60deg) brightness(1.4); }
+  95%      { opacity:.18; transform:translateX(-2px); filter:hue-rotate(200deg) brightness(2.2); }
+  96%      { opacity:.88; transform:translateX(0);    filter:drop-shadow(0 0 3px rgba(255,255,255,0.68)); }
+  97%      { opacity:.38; transform:translateX(1px);  filter:hue-rotate(90deg); }
+  98%      { opacity:.82; transform:translateX(0);    filter:drop-shadow(0 0 3px rgba(255,255,255,0.68)) drop-shadow(0 0 7px rgba(210,225,255,0.32)); }
 }
 
-/* RESTART BUTTON */
-#restart{
-  margin-top:40px;
-  padding:18px 80px;
-  font-size:24px;
-  font-weight:900;
-  letter-spacing:3px;
-  border:none;
-  border-radius:60px;
-  cursor:pointer;
-  background:linear-gradient(180deg, #d4ff4d, #a6ff00);
-  color:#111;
-  text-shadow:
-    0 1px 0 rgba(255,255,255,0.5),
-    0 2px 4px rgba(0,0,0,0.4);
-  box-shadow:
-    0 0 40px #baff00,
-    0 0 80px #baff00,
-    inset 0 4px 12px rgba(255,255,255,0.7),
-    inset 0 -6px 12px rgba(0,0,0,0.3);
-  position: relative;
-  overflow: hidden;
+/* Count line — brighter metal, number stays crisp */
+#statusCount {
+  font-family: 'Arial Black', monospace;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  white-space: nowrap;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #eaf0f8 28%,
+    #c8d4e4 62%,
+    #dde8f4 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter:
+    drop-shadow(0 0 4px rgba(255,255,255,0.78))
+    drop-shadow(0 0 10px rgba(200,220,255,0.32));
+  animation: countFlicker 8s ease-in-out infinite 1s;
+}
+@keyframes countFlicker {
+  0%,100%  { opacity:.78; }
+  88%      { opacity:.78; }
+  89%      { opacity:.14; transform:translateX(-2px); }
+  90%      { opacity:.82; transform:translateX(1px); }
+  91%      { opacity:.28; transform:translateX(0); }
+  92%      { opacity:.75; }
 }
 
-#restart::before {
-  content: '';
+/* --- STYLE UPDATE END: metallic silver/white status HUD --- */
+/* --- NEW CODE END: ONLINE STATUS HUD --- */
+
+/* --- MICRO TUNING START: identity clarity CSS --- */
+
+/* Round-start identity announcement overlay */
+#roundFlash {
+  position: fixed; inset: 0;
+  z-index: 1999;
+  pointer-events: none;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  background: radial-gradient(ellipse at center, rgba(4,0,18,0.72) 0%, transparent 70%);
+}
+#roundFlash.show { opacity: 1; }
+#roundFlash.hide { opacity: 0; }
+
+.rf-round {
+  font-size: 16px; font-weight: 900; letter-spacing: 6px;
+  color: rgba(255,255,255,0.5);
+  text-shadow: 0 0 10px rgba(0,240,255,0.35);
+}
+.rf-you {
+  font-size: 34px; font-weight: 900; letter-spacing: 4px;
+  color: #ffffff;
+  text-shadow: 0 0 8px #fff, 0 0 20px rgba(0,240,255,0.55), 0 0 38px rgba(0,240,255,0.25);
+}
+.rf-sym {
+  font-size: 24px; font-weight: 900; letter-spacing: 2px; opacity: 0.75;
+}
+.rf-sym.x-col { color: #00f0ff; text-shadow: 0 0 12px #00f0ff; }
+.rf-sym.o-col { color: #ff00cc; text-shadow: 0 0 12px #ff00cc; }
+
+/* Tiny identity sub-label below the big X / O symbol in side panels */
+.sym-identity {
+  display: block;
+  font-size: 10px; font-weight: 900; letter-spacing: 3px;
+  opacity: 0.52; color: inherit; line-height: 1; margin-top: -2px;
+}
+
+/* --- MICRO TUNING END: identity clarity CSS --- */
+
+/* --- NEW: room3D wrapper + adLayer structure --- */
+#room3D {
+  position: fixed;
+  inset: 0;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#adLayer {
   position: absolute;
-  inset: -5px;
-  border-radius: 65px;
-  background: linear-gradient(white, rgba(255,255,255,0.65));
-  z-index: -1;
-  filter: blur(8px);
-  opacity: 0.85;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(5deg);
 }
 
-#restart:active{
-  transform:scale(0.93);
+/* Ad screens — shared base style */
+.adScreen {
+  position: absolute;
+  border-radius: 12px;
+  background: rgba(20, 20, 30, 0.6);
+  border: 2px solid rgba(0, 255, 255, 0.4);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  /* Subtle breathing pulse — each screen offset slightly for variety */
+  animation: adBreath 4s ease-in-out infinite;
 }
+
+/* Pink-tinted screens (ad2, ad5, ad7) */
+#ad2, #ad5, #ad7 {
+  border-color: rgba(255, 0, 204, 0.55);
+  box-shadow:
+    0 0 8px  rgba(255, 0, 204, 0.45),
+    0 0 22px rgba(255, 0, 204, 0.20),
+    inset 0 0 10px rgba(255, 0, 204, 0.08);
+}
+
+/* Gold-tinted screen (ad6 — center back feature screen) */
+#ad6 {
+  border-color: rgba(255, 215, 0, 0.50);
+  box-shadow:
+    0 0 8px  rgba(255, 215, 0, 0.40),
+    0 0 22px rgba(255, 215, 0, 0.18),
+    inset 0 0 10px rgba(255, 215, 0, 0.07);
+}
+
+@keyframes adBreath {
+  0%, 100% { opacity: 0.72; }
+  50%       { opacity: 0.88; }
+}
+
+/* Animation offsets so screens don't all pulse together */
+#ad1 { animation-delay: 0s;    }
+#ad2 { animation-delay: 0.6s;  }
+#ad3 { animation-delay: 1.2s;  }
+#ad4 { animation-delay: 1.8s;  }
+#ad5 { animation-delay: 0.9s;  }
+#ad6 { animation-delay: 2.4s;  }
+#ad7 { animation-delay: 0.3s;  }
+
+/* UPPER LAYER — 4 screens */
+#ad1 {  /* front-left:  neg X, slight neg Z */
+  width: 300px; height: 170px;
+  top: 50%; left: 50%;
+  transform: translate3d(-540px, -160px, -180px);
+}
+#ad2 {  /* front-right: pos X, slight neg Z */
+  width: 310px; height: 165px;
+  top: 50%; left: 50%;
+  transform: translate3d( 240px, -155px, -180px);
+}
+#ad3 {  /* far-left:  more neg X, deeper Z */
+  width: 280px; height: 155px;
+  top: 50%; left: 50%;
+  transform: translate3d(-700px, -100px, -520px);
+}
+#ad4 {  /* far-right: more pos X, deeper Z */
+  width: 285px; height: 150px;
+  top: 50%; left: 50%;
+  transform: translate3d( 420px, -95px,  -520px);
+}
+
+/* LOWER LAYER — 3 screens */
+#ad5 {  /* left bottom */
+  width: 265px; height: 145px;
+  top: 50%; left: 50%;
+  transform: translate3d(-620px, 120px, -340px);
+}
+#ad6 {  /* center back — deepest Z, wider */
+  width: 340px; height: 200px;
+  top: 50%; left: 50%;
+  transform: translate3d(-170px, 180px, -780px);
+}
+#ad7 {  /* right bottom */
+  width: 260px; height: 142px;
+  top: 50%; left: 50%;
+  transform: translate3d( 360px, 125px, -340px);
+}
+/* --- END: room3D structure --- */
+
 </style>
 </head>
 <body>
 
-<div id="title">X/O CLASH</div>
+<!-- NEW: 3D room wrapper — sits behind everything, pointer-events:none -->
+<div id="room3D">
+  <div id="adLayer">
+    <!-- 7 floating ad screens will be placed here -->
+  </div>
+</div>
 
+<!-- ===== TITLE ===== -->
+<div id="title">
+  <svg id="xoSvg" viewBox="-60 -60 120 120" width="215" height="215"
+       xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">
+    <defs>
+      <filter id="fp" x="-150%" y="-150%" width="400%" height="400%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="b0"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="2"   result="b1"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="6"   result="b2"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="13"  result="b3"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="22"  result="b4"/>
+        <feMerge><feMergeNode in="b4"/><feMergeNode in="b3"/><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="b0"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="fc" x="-150%" y="-150%" width="400%" height="400%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="b0"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="2"   result="b1"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="6"   result="b2"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="13"  result="b3"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="22"  result="b4"/>
+        <feMerge><feMergeNode in="b4"/><feMergeNode in="b3"/><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="b0"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="fg" x="-150%" y="-150%" width="400%" height="400%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="0.6" result="b0"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3"   result="b1"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="9"   result="b2"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="18"  result="b3"/>
+        <feMerge><feMergeNode in="b3"/><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="b0"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="forb" x="-300%" y="-300%" width="700%" height="700%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="fdebris" x="-200%" y="-200%" width="500%" height="500%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- Outer cosmic halo -->
+    <circle cx="0" cy="0" r="48" fill="none" stroke="#ff00cc" stroke-width="0.6" opacity="0.18" filter="url(#fp)" style="animation:pinkPulse 5s ease-in-out infinite 1s"/>
+
+    <!-- Outer tick ring r=40 -->
+    <g filter="url(#fp)" style="animation:pinkPulse 4.5s ease-in-out infinite 0.3s">
+      <path d="M -16.91 -36.25 A 40 40 0 1 1 -36.25 -16.91" fill="none" stroke="#ff00cc" stroke-width="0.9" stroke-dasharray="5 8 1.5 8" opacity="0.30"/>
+      <line x1="0"      y1="-40"    x2="0"      y2="-35"    stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="20"     y1="-34.64" x2="17.5"   y2="-30.31" stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="34.64"  y1="-20"    x2="30.31"  y2="-17.5"  stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="40"     y1="0"      x2="35"     y2="0"      stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="34.64"  y1="20"     x2="30.31"  y2="17.5"   stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="20"     y1="34.64"  x2="17.5"   y2="30.31"  stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="0"      y1="40"     x2="0"      y2="35"     stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="-20"    y1="34.64"  x2="-17.5"  y2="30.31"  stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="-34.64" y1="20"     x2="-30.31" y2="17.5"   stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <line x1="-40"    y1="0"      x2="-35"    y2="0"      stroke="#ff00cc" stroke-width="1.1" opacity="0.55"/>
+      <circle cx="0"      cy="-40"    r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="20"     cy="-34.64" r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="34.64"  cy="-20"    r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="40"     cy="0"      r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="34.64"  cy="20"     r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="20"     cy="34.64"  r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="0"      cy="40"     r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="-20"    cy="34.64"  r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="-34.64" cy="20"     r="1.2" fill="#ff00cc" opacity="0.7"/>
+      <circle cx="-40"    cy="0"      r="1.2" fill="#ff00cc" opacity="0.7"/>
+    </g>
+
+    <!-- Inner dashed arc r=20 -->
+    <path d="M -8.45 -18.13 A 20 20 0 1 1 -18.13 -8.45" fill="none" stroke="#ff00cc" stroke-width="1.6" stroke-dasharray="4 7 1.5 5" opacity="0.38" filter="url(#fp)" style="animation:pinkPulse 4s ease-in-out infinite 0.8s"/>
+
+    <!-- Main O circle r=28, NW gap -->
+    <path id="oCircle" d="M -11.84 -25.37 A 28 28 0 1 1 -25.37 -11.84" fill="none" stroke="#ff00cc" stroke-width="5.2" stroke-linecap="round" filter="url(#fp)" style="animation:pinkPulse 3s ease-in-out infinite"/>
+    <path d="M -11.84 -25.37 A 28 28 0 1 1 -25.37 -11.84" fill="none" stroke="rgba(255,180,255,0.55)" stroke-width="1.4" stroke-linecap="round" opacity="0.7" style="animation:pinkPulse 3s ease-in-out infinite"/>
+
+    <!-- Circuit dots on O arc -->
+    <g filter="url(#fp)" style="animation:pinkPulse 3s ease-in-out infinite">
+      <circle cx="-2.44"  cy="-27.89" r="2.0" fill="#ff00cc" opacity="0.9"/>
+      <circle cx="10.71"  cy="-25.88" r="1.6" fill="#ff00cc" opacity="0.8"/>
+      <circle cx="20"     cy="-19.80" r="2.0" fill="#ff00cc" opacity="0.9"/>
+      <circle cx="25.88"  cy="-10.71" r="1.6" fill="#ff00cc" opacity="0.8"/>
+      <circle cx="27.89"  cy="2.44"   r="2.0" fill="#ff00cc" opacity="0.9"/>
+      <circle cx="25.88"  cy="10.71"  r="1.6" fill="#ff00cc" opacity="0.8"/>
+      <circle cx="19.80"  cy="20"     r="2.0" fill="#ff00cc" opacity="0.9"/>
+      <circle cx="10.71"  cy="25.88"  r="1.6" fill="#ff00cc" opacity="0.8"/>
+      <circle cx="-2.44"  cy="27.89"  r="2.0" fill="#ff00cc" opacity="0.9"/>
+      <circle cx="-16.07" cy="22.93"  r="1.6" fill="#ff00cc" opacity="0.8"/>
+      <circle cx="-25.37" cy="11.84"  r="2.0" fill="#ff00cc" opacity="0.9"/>
+    </g>
+
+    <!-- X arms (cyan) -->
+    <g id="xGroup" filter="url(#fc)" style="animation:cyanPulse 3s ease-in-out infinite">
+      <line x1="0" y1="0" x2="12.02"  y2="-12.02" stroke="#00f0ff" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="0" x2="12.02"  y2="12.02"  stroke="#00f0ff" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="0" x2="-12.02" y2="12.02"  stroke="#00f0ff" stroke-width="6" stroke-linecap="round"/>
+      <line id="nwArm" x1="0" y1="0" x2="-6.97" y2="-6.97" stroke="#00f0ff" stroke-width="6" stroke-linecap="round"/>
+      <!-- Tick marks -->
+      <line x1="7.45"  y1="-10.57" x2="10.57" y2="-7.45"  stroke="#00f0ff" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>
+      <line x1="7.45"  y1="10.57"  x2="10.57" y2="7.45"   stroke="#00f0ff" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>
+      <line x1="-10.57" y1="7.45"  x2="-7.45" y2="10.57"  stroke="#00f0ff" stroke-width="1.8" stroke-linecap="round" opacity="0.88"/>
+      <line x1="4.48"  y1="-6.34"  x2="6.34"  y2="-4.48"  stroke="#00f0ff" stroke-width="1.2" stroke-linecap="round" opacity="0.62"/>
+      <line x1="4.48"  y1="6.34"   x2="6.34"  y2="4.48"   stroke="#00f0ff" stroke-width="1.2" stroke-linecap="round" opacity="0.62"/>
+      <line x1="-6.34" y1="4.48"   x2="-4.48" y2="6.34"   stroke="#00f0ff" stroke-width="1.2" stroke-linecap="round" opacity="0.62"/>
+      <!-- Arm tip nodes -->
+      <circle cx="12.02"  cy="-12.02" r="3.2" fill="none" stroke="#00f0ff" stroke-width="1.0" opacity="0.6"/>
+      <circle cx="12.02"  cy="-12.02" r="2.4" fill="#00f0ff" opacity="0.85"/>
+      <circle cx="12.02"  cy="-12.02" r="1.0" fill="#ffffff" opacity="0.95"/>
+      <circle cx="12.02"  cy="12.02"  r="3.2" fill="none" stroke="#00f0ff" stroke-width="1.0" opacity="0.6"/>
+      <circle cx="12.02"  cy="12.02"  r="2.4" fill="#00f0ff" opacity="0.85"/>
+      <circle cx="12.02"  cy="12.02"  r="1.0" fill="#ffffff" opacity="0.95"/>
+      <circle cx="-12.02" cy="12.02"  r="3.2" fill="none" stroke="#00f0ff" stroke-width="1.0" opacity="0.6"/>
+      <circle cx="-12.02" cy="12.02"  r="2.4" fill="#00f0ff" opacity="0.85"/>
+      <circle cx="-12.02" cy="12.02"  r="1.0" fill="#ffffff" opacity="0.95"/>
+      <!-- NW broken tip -->
+      <circle id="nwTipDot" cx="-6.97" cy="-6.97" r="2.6" fill="#ffffff" opacity="0.82"/>
+      <circle cx="-6.97" cy="-6.97" r="1.3" fill="#00f0ff" opacity="1"/>
+      <circle cx="-6.97" cy="-6.97" r="4.0" fill="none" stroke="#00f0ff" stroke-width="0.7" stroke-dasharray="1.5 2.5" opacity="0.5"/>
+      <!-- Center hub -->
+      <circle cx="0" cy="0" r="5.0" fill="none" stroke="#00f0ff" stroke-width="0.9" opacity="0.45"/>
+      <circle cx="0" cy="0" r="3.2" fill="#00f0ff" opacity="0.65"/>
+      <circle cx="0" cy="0" r="1.6" fill="#aaffff" opacity="0.88"/>
+      <circle cx="0" cy="0" r="0.7" fill="#ffffff" opacity="1"/>
+    </g>
+
+    <!-- Debris sparks at NW break -->
+    <g id="debrisGroup" filter="url(#fdebris)" style="animation:debrisSpark 2.8s ease-in-out infinite">
+      <line x1="-6.97" y1="-6.97" x2="-12.5" y2="-14.0" stroke="#00f0ff" stroke-width="1.1" stroke-linecap="round" opacity="0.72"/>
+      <line x1="-6.97" y1="-6.97" x2="-15.2" y2="-9.8"  stroke="#00f0ff" stroke-width="0.9" stroke-linecap="round" opacity="0.58"/>
+      <line x1="-6.97" y1="-6.97" x2="-9.4"  y2="-16.0" stroke="#00f0ff" stroke-width="0.8" stroke-linecap="round" opacity="0.50"/>
+      <line x1="-6.97" y1="-6.97" x2="-11.5" y2="-11.5" stroke="#ffffff" stroke-width="0.5" stroke-linecap="round" opacity="0.42"/>
+      <circle cx="-12.8" cy="-14.5" r="1.2" fill="#ffffff" opacity="0.82"/>
+      <circle cx="-15.8" cy="-10.2" r="0.9" fill="#00f0ff" opacity="0.68"/>
+      <circle cx="-9.8"  cy="-16.5" r="0.8" fill="#ffffff" opacity="0.60"/>
+    </g>
+
+    <!-- Gold axis beam NE-SW -->
+    <g id="goldGroup" filter="url(#fg)" style="animation:goldPulse 2.2s ease-in-out infinite">
+      <line id="goldNE" x1="22.06" y1="-22.06" x2="31.25" y2="-31.25" stroke="#ffd700" stroke-width="4.2" stroke-linecap="round"/>
+      <line x1="22.06" y1="-22.06" x2="31.25" y2="-31.25" stroke="#fffbe0" stroke-width="1.6" stroke-linecap="round" opacity="0.75"/>
+      <line id="goldSW" x1="-22.06" y1="22.06" x2="-31.25" y2="31.25" stroke="#ffd700" stroke-width="4.2" stroke-linecap="round"/>
+      <line x1="-22.06" y1="22.06" x2="-31.25" y2="31.25" stroke="#fffbe0" stroke-width="1.6" stroke-linecap="round" opacity="0.75"/>
+      <circle cx="26.66"  cy="-26.66" r="2.0" fill="#ffd700" opacity="0.92"/>
+      <circle cx="-26.66" cy="26.66"  r="2.0" fill="#ffd700" opacity="0.92"/>
+      <circle cx="32.2"   cy="-32.2"  r="4.0" fill="none" stroke="#ffd700" stroke-width="0.9" opacity="0.45"/>
+      <circle cx="32.2"   cy="-32.2"  r="3.0" fill="#fffaaa" opacity="0.98"/>
+      <circle cx="32.2"   cy="-32.2"  r="1.6" fill="#ffffff" opacity="1"/>
+      <circle cx="-32.2"  cy="32.2"   r="4.0" fill="none" stroke="#ffd700" stroke-width="0.9" opacity="0.45"/>
+      <circle cx="-32.2"  cy="32.2"   r="3.0" fill="#fffaaa" opacity="0.98"/>
+      <circle cx="-32.2"  cy="32.2"   r="1.6" fill="#ffffff" opacity="1"/>
+    </g>
+
+    <!-- Orbiting particles (JS-animated) -->
+    <circle id="orb1" cx="44"  cy="0" r="3.0" fill="#00f0ff" opacity="0.95" filter="url(#forb)"/>
+    <circle id="orb2" cx="-44" cy="0" r="3.0" fill="#ff00cc" opacity="0.95" filter="url(#forb)"/>
+    <circle id="orb3" cx="34"  cy="0" r="1.9" fill="#ff00cc" opacity="0.72" filter="url(#forb)"/>
+    <circle id="orb4" cx="-34" cy="0" r="1.9" fill="#00f0ff" opacity="0.72" filter="url(#forb)"/>
+  </svg>
+  <span id="clashText">CLASH</span>
+</div>
+
+<!-- --- POLISH: compact scoreboard bar above board — P1/P2 identity labels --- -->
+<div id="scoreBar">
+  <span class="sb-x">P1: <span id="sbX">0</span></span>
+  <span class="sb-sep">|</span>
+  <span class="sb-round" id="sbRound">RD 1/5</span>
+  <span class="sb-sep">|</span>
+  <span class="sb-o">P2: <span id="sbO">0</span></span>
+</div>
+
+<!-- ===== GAME ===== -->
 <div id="game">
-  <div id="left" class="side"></div>
+  <div id="left"  class="side"></div>
   <div id="board"></div>
   <div id="right" class="side"></div>
 </div>
 
 <button id="restart">RESTART</button>
+<div id="roundDisplay"><span id="roundText">ROUND 1 / 5</span></div>
+<canvas id="chaosCanvas"></canvas>
+
+<!-- ===== MODE SCREENS (static HTML, shown via .active class) ===== -->
+<div id="modeScreen" class="screen-overlay active">
+  <div class="mode-inner">
+    <div class="mode-title">SELECT<br>MODE</div>
+    <div class="mode-buttons">
+      <button class="mode-btn" id="btnAI">
+        <span class="mode-btn-icon">🤖</span>
+        <span class="mode-btn-label">VS AI</span>
+        <span class="mode-btn-sub">Single Player</span>
+      </button>
+      <button class="mode-btn" id="btnOnline">
+        <span class="mode-btn-icon">🌐</span>
+        <span class="mode-btn-label">VS PLAYER</span>
+        <span class="mode-btn-sub">Online · 2 players required</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="lobbyScreen" class="screen-overlay">
+  <div class="mode-inner">
+    <div class="mode-title" style="font-size:36px">ONLINE<br>ARENA</div>
+    <div id="lobbyStatus" class="lobby-status">Choose your role:</div>
+    <div id="lobbyChoice" class="lobby-or">
+      <button class="mode-btn" id="btnHost" style="min-width:150px">
+        <span class="mode-btn-icon">📡</span>
+        <span class="mode-btn-label">HOST</span>
+        <span class="mode-btn-sub">Create room</span>
+      </button>
+      <div class="or-text">OR</div>
+      <button class="mode-btn" id="btnGuest" style="min-width:150px">
+        <span class="mode-btn-icon">🔌</span>
+        <span class="mode-btn-label">JOIN</span>
+        <span class="mode-btn-sub">Enter code</span>
+      </button>
+    </div>
+    <div id="lobbyHostPanel" style="display:none;text-align:center">
+      <div class="lobby-label">YOUR ROOM CODE</div>
+      <div id="roomCode" class="room-code">——</div>
+      <div class="lobby-hint" style="margin-top:8px">Share this code with your opponent</div>
+      <div id="waitingMsg" class="waiting-msg" style="margin-top:16px"><span class="waiting-dot"></span>Waiting for opponent…</div>
+    </div>
+    <div id="lobbyGuestPanel" style="display:none;text-align:center">
+      <div class="lobby-label">ENTER ROOM CODE</div>
+      <input id="codeInput" class="code-input" maxlength="36" placeholder="Paste code here"/>
+      <button class="mode-btn" id="btnJoin" style="margin-top:16px;min-width:180px">
+        <span class="mode-btn-label">CONNECT</span>
+      </button>
+      <div id="joinStatus" class="lobby-status" style="margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="matchOverScreen" class="screen-overlay">
+  <div class="mode-inner">
+    <div class="mode-title">MATCH<br>COMPLETE</div>
+    <div id="matchResult" class="match-result"></div>
+    <div class="mode-buttons" style="margin-top:20px">
+      <button class="mode-btn" id="btnRematch">
+        <span class="mode-btn-icon">🔄</span>
+        <span class="mode-btn-label">REMATCH</span>
+        <span class="mode-btn-sub">Same mode · reset scores</span>
+      </button>
+      <button class="mode-btn" id="btnModeSelect">
+        <span class="mode-btn-icon">🏠</span>
+        <span class="mode-btn-label">MENU</span>
+        <span class="mode-btn-sub">Change mode</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<button id="backBtn">← MENU</button>
+
+<!-- --- NEW CODE START: ONLINE STATUS HUD ---
+     Completely isolated visual element.
+     Pure CSS animation. Simulated player count via a single
+     lightweight setTimeout loop — zero connection to game state.
+     ---------------------------------------------------------- -->
+<div id="statusHUD">
+  <div id="statusDot"></div>
+  <div id="statusAlien">⌬ ⟁ ⍋ ⎋ ⏃ ⟊ ⌖</div>
+  <div id="statusCount">1 ░▒▓ SIGNAL</div>
+</div>
+<!-- --- NEW CODE END: ONLINE STATUS HUD --- -->
 
 <script>
+// ============================================================
+//  BOARD GEOMETRY
+// ============================================================
+const PAD    = 20;
+const CELL   = 90;
+const GAP    = 12;
+const STRIDE = 102;
+const CV_SZ  = 334;
+
+const cLeft = col => PAD + col * STRIDE;
+const cRight = col => PAD + col * STRIDE + CELL;
+const cTop  = row => PAD + row * STRIDE;
+const cBot  = row => PAD + row * STRIDE + CELL;
+const cCX   = col => PAD + col * STRIDE + CELL / 2;
+const cCY   = row => PAD + row * STRIDE + CELL / 2;
+
+function getBeamPts(combo) {
+  const [a,, c] = combo;
+  const col0 = a % 3, row0 = Math.floor(a / 3);
+  const col2 = c % 3, row2 = Math.floor(c / 3);
+  if (row0 === row2) return { sx: cLeft(col0), sy: cCY(row0), ex: cRight(col2), ey: cCY(row2) };
+  if (col0 === col2) return { sx: cCX(col0), sy: cTop(row0), ex: cCX(col2), ey: cBot(row2) };
+  if (a === 0)       return { sx: cLeft(col0), sy: cTop(row0), ex: cRight(col2), ey: cBot(row2) };
+  return { sx: cRight(col0), sy: cTop(row0), ex: cLeft(col2), ey: cBot(row2) };
+}
+
+// ============================================================
+//  GAME STATE
+// ============================================================
 let boardState = Array(9).fill(null);
-let current = "X";
-let gameOver = false;
-let swap = false;
+let current    = 'X';
+let gameOver   = false;
+let isDraw     = false;
+let swap       = false;
+let scores     = { X: 0, O: 0 }; // kept for legacy UI compat — not used for winner calc
 
-const board = document.getElementById("board");
-const left = document.getElementById("left");
-const right = document.getElementById("right");
-const restartBtn = document.getElementById("restart");
+// --- POLISH + SCORE FIX START: player-identity score system ---
+// PROBLEM: symbols swap every round, so scores.X and scores.O track the wrong
+// thing — "X wins" after a swap means a different human won.
+// FIX: track wins by PLAYER IDENTITY (p1=human/host, p2=AI/guest), not by symbol.
+// player1Symbol = the symbol player1 is currently playing (= roundStartPlayer
+// BEFORE it toggles). Captured at round-end before the toggle happens.
+let playerScores  = { p1: 0, p2: 0 };
+// --- POLISH + SCORE FIX END ---
 
-/* ===== FIXED CANVAS SETUP ===== */
-const canvas = document.createElement("canvas");
-canvas.id = "winCanvas";
-board.appendChild(canvas);
-const ctx = canvas.getContext("2d");
+// Mode & round state
+let gameMode        = null;
+let completedRounds = 0;
+const TOTAL_ROUNDS  = 5;
+let roundInProgress = false;
+let roundStartPlayer = 'X';
+let humanSymbol      = 'X';
 
-// HiDPI + Perfect sizing
-function resizeCanvas() {
-  const rect = board.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  
-  // Canvas display size (inside padding)
-  canvas.style.width = (rect.width - 40) + 'px';
-  canvas.style.height = (rect.height - 40) + 'px';
-  
-  // Canvas resolution (HiDPI)
-  canvas.width = (rect.width - 40) * dpr;
-  canvas.height = (rect.height - 40) * dpr;
-  
-  // Scale context for crisp lines
-  ctx.scale(dpr, dpr);
+// Online state
+let peer     = null;
+let conn     = null;
+let mySymbol = 'X';
+
+// Suppress flags (let AI / online fire clicks through gates)
+let suppressAI     = false;
+let suppressOnline = false;
+// --- NEW CODE START: AI THINKING FLAG ---
+// Blocks player input while AI is "thinking" (during the delay before its move)
+let aiThinking = false;
+// --- NEW CODE END: AI THINKING FLAG ---
+
+// --- WINNER SNAPSHOT FIX START ---
+// These are written ONCE at win-detection, BEFORE any symbol toggle.
+// updateUI() reads these during gameOver state so it never uses stale toggled values.
+let finalWinnerSym    = null;  // 'X' or 'O' — the symbol that won
+let finalWinnerPlayer = null;  // 'YOU' / 'CPU' / 'OPP' / 'P1' / 'P2'
+let finalP1IsX        = null;  // was p1 playing X at the moment of win?
+// --- WINNER SNAPSHOT FIX END ---
+
+// --- UI LOCK FIX START ---
+// isRoundActive = true  → round in progress, all UI updates allowed
+// isRoundActive = false → round finished, UI updates blocked (winner display is frozen)
+// Set to false AFTER the single correct winner updateUI() call.
+// Reset to true at restart / fullReset before the next updateUI() call.
+let isRoundActive = false;  // starts false; set true when a game mode begins
+// --- UI LOCK FIX END ---
+
+const boardEl  = document.getElementById('board');
+const leftEl   = document.getElementById('left');
+const rightEl  = document.getElementById('right');
+const restBtn  = document.getElementById('restart');
+const chaosCv  = document.getElementById('chaosCanvas');
+const chaosCtx = chaosCv.getContext('2d');
+const gameEl   = document.getElementById('game');
+
+function resizeChaos() { chaosCv.width = window.innerWidth; chaosCv.height = window.innerHeight; }
+resizeChaos();
+window.addEventListener('resize', resizeChaos);
+
+// ============================================================
+//  WIN CANVAS
+// ============================================================
+const winCv  = document.createElement('canvas');
+winCv.id     = 'winCanvas';
+winCv.width  = CV_SZ; winCv.height = CV_SZ;
+winCv.style.cssText = `width:${CV_SZ}px;height:${CV_SZ}px;position:absolute;top:0;left:0;pointer-events:none;z-index:5;`;
+boardEl.appendChild(winCv);
+const winCtx = winCv.getContext('2d');
+winCtx.lineCap = 'round';
+
+// Scanlines
+const scanEl = document.createElement('div');
+scanEl.id = 'scanlines';
+boardEl.appendChild(scanEl);
+
+// ============================================================
+//  CELLS
+// ============================================================
+for (let i = 0; i < 9; i++) {
+  const c = document.createElement('div');
+  c.className = 'cell'; c.dataset.i = i;
+  boardEl.appendChild(c);
 }
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
 
-/* ===== SOUND SYSTEM ===== */
+// ============================================================
+//  AUDIO ENGINE
+// ============================================================
 let audioCtx;
-
-function playSound(freq, duration = 0.1, type = 'sine') {
+function getAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const oscillator = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  return audioCtx;
+}
+function mkOsc(ctx, freq, type, peak, t, end, freqEnd) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (freqEnd != null) o.frequency.exponentialRampToValueAtTime(freqEnd, end);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, end);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(end + 0.03);
+}
+function playXSound() { const ctx = getAudio(), t = ctx.currentTime; mkOsc(ctx,740,'triangle',.28,t,t+.11); mkOsc(ctx,1480,'sine',.07,t,t+.07); mkOsc(ctx,3200,'sine',.04,t,t+.035); }
+function playOSound() { const ctx = getAudio(), t = ctx.currentTime; mkOsc(ctx,490,'triangle',.28,t,t+.17,365); mkOsc(ctx,980,'sine',.07,t,t+.12); mkOsc(ctx,245,'sine',.04,t,t+.10); }
+function playBeamSound() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  mkOsc(ctx,1500,'sawtooth',.24,t,t+.55,160); mkOsc(ctx,3000,'sine',.08,t,t+.38,300);
+  mkOsc(ctx,700,'square',.06,t,t+.22,75);    mkOsc(ctx,2200,'sine',.07,t,t+.06);
+  mkOsc(ctx,1800,'triangle',.05,t+.02,t+.10,400);
+}
+function playDrawSound() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  [440,415,392,370,349,330].forEach((f,i) => mkOsc(ctx,f,'triangle',.09,t+i*.09,t+i*.09+.3));
+}
+function playWinSound() {
+  const ctx = getAudio(), t = ctx.currentTime;
+  mkOsc(ctx,90,'sine',.85,t,t+.65,32); mkOsc(ctx,45,'sine',.45,t,t+.50,20);
+  const sz=Math.floor(ctx.sampleRate*.44), buf=ctx.createBuffer(1,sz,ctx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<sz;i++) d[i]=Math.random()*2-1;
+  const ns=ctx.createBufferSource(); ns.buffer=buf;
+  const fl=ctx.createBiquadFilter(); fl.type='lowpass'; fl.frequency.value=900;
+  const ng=ctx.createGain(); ng.gain.setValueAtTime(.55,t); ng.gain.exponentialRampToValueAtTime(.0001,t+.44);
+  ns.connect(fl); fl.connect(ng); ng.connect(ctx.destination); ns.start(t); ns.stop(t+.46);
+  [880,1100,1320,1540,1760,2100].forEach((f,i) => mkOsc(ctx,f,'sine',.10,t+i*.055,t+i*.055+.2));
+}
+function playResetSound() { const ctx=getAudio(),t=ctx.currentTime; mkOsc(ctx,180,'sine',.18,t,t+.32,680); mkOsc(ctx,360,'sine',.07,t+.04,t+.32,1300); }
 
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+// --- POLISH START: SOUND & VISUAL HELPERS ---
 
-  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-
-  oscillator.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  oscillator.start();
-  oscillator.stop(audioCtx.currentTime + duration);
+// GLITCH STATIC SOUND — low-volume noise burst during environment glitch
+// Called from the Three.js glitch system. Safe to call any time.
+function playGlitchStaticSound() {
+  try {
+    const ctx = getAudio(), t = ctx.currentTime;
+    const sz  = Math.floor(ctx.sampleRate * 0.18);
+    const buf = ctx.createBuffer(1, sz, ctx.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < sz; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / sz); // fade out
+    const ns = ctx.createBufferSource(); ns.buffer = buf;
+    const fl = ctx.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = 1800; fl.Q.value = 0.6;
+    const g  = ctx.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    ns.connect(fl); fl.connect(g); g.connect(ctx.destination);
+    ns.start(t); ns.stop(t + 0.2);
+  } catch(e) {}
 }
 
-function playPlaceSound(isX) {
-  playSound(isX ? 720 : 540, 0.09, 'triangle');
+// HIGHLIGHT WINNING CELLS — adds glow pulse + CSS custom property for color
+function highlightWinCells(combo, player) {
+  const cells = document.querySelectorAll('.cell');
+  const color  = player === 'X' ? '#00f0ff' : '#ff00cc';
+  combo.forEach(idx => {
+    const c = cells[idx];
+    if (!c) return;
+    c.style.setProperty('--win-color', color);
+    c.classList.add('win-cell');
+  });
+  // Board flash
+  boardEl.classList.add('board-flash');
+  setTimeout(() => boardEl.classList.remove('board-flash'), 500);
 }
 
-function playSparkle() {
-  playSound(880, 0.08, 'sine');
-  setTimeout(() => playSound(1100, 0.08, 'sine'), 40);
-  setTimeout(() => playSound(1320, 0.12, 'sine'), 90);
+// HIGHLIGHT DRAW CELLS — soft desaturated pulse on all occupied cells
+function highlightDrawCells() {
+  document.querySelectorAll('.cell').forEach(c => {
+    c.classList.add('draw-cell');
+  });
+  boardEl.classList.add('board-draw-pulse');
+  setTimeout(() => boardEl.classList.remove('board-draw-pulse'), 750);
 }
 
-function playResetSound() {
-  playSound(420, 0.25, 'sine');
+// CLEAR CELL HIGHLIGHTS — called on restart / new round
+function clearCellHighlights() {
+  document.querySelectorAll('.cell').forEach(c => {
+    c.classList.remove('win-cell', 'draw-cell');
+    c.style.removeProperty('--win-color');
+  });
+  boardEl.classList.remove('board-flash', 'board-draw-pulse', 'ai-thinking');
 }
 
-/* CREATE GRID */
-for(let i = 0; i < 9; i++){
-  const c = document.createElement("div");
-  c.className = "cell";
-  c.dataset.i = i;
-  board.appendChild(c);
+// UPDATE SCOREBAR — shows player-identity scores (P1 / P2), not symbol scores
+// --- POLISH + SCORE FIX START ---
+function updateScoreBar() {
+  const sbX = document.getElementById('sbX');   // repurposed as P1 score
+  const sbO = document.getElementById('sbO');   // repurposed as P2 score
+  const sbR = document.getElementById('sbRound');
+  if (sbX) sbX.textContent = playerScores.p1;
+  if (sbO) sbO.textContent = playerScores.p2;
+  if (sbR) sbR.textContent = 'RD ' + Math.min(completedRounds + 1, TOTAL_ROUNDS) + '/' + TOTAL_ROUNDS;
+}
+// --- POLISH + SCORE FIX END ---
+
+// SHOW / HIDE SCOREBAR
+function showScoreBar() { const s = document.getElementById('scoreBar'); if(s) s.style.display = 'flex'; }
+function hideScoreBar() { const s = document.getElementById('scoreBar'); if(s) s.style.display = 'none'; }
+
+// --- POLISH END: SOUND & VISUAL HELPERS ---
+
+// ============================================================
+//  3D BOARD TILT
+// ============================================================
+let mouseTX=0,mouseTY=0,tiltX=0,tiltY=0,clickTX=0,clickTY=0,clickDec=0,autoAngle=0;
+document.addEventListener('mousemove', e => {
+  const r=boardEl.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  mouseTY=((e.clientX-cx)/(window.innerWidth/2))*9;
+  mouseTX=((e.clientY-cy)/(window.innerHeight/2))*-9;
+});
+function applyClickTilt(idx) { clickTY=(idx%3-1)*22; clickTX=(Math.floor(idx/3)-1)*22; clickDec=1.0; }
+(function tiltLoop() {
+  autoAngle+=.009;
+  tiltX+=(mouseTX-tiltX)*.07; tiltY+=(mouseTY-tiltY)*.07;
+  if(clickDec>.005) clickDec*=.84; else clickDec=0;
+  const fx=tiltX+Math.sin(autoAngle*.77)*5+clickTX*clickDec;
+  const fy=tiltY+Math.sin(autoAngle)*9+clickTY*clickDec;
+  boardEl.style.transform=`perspective(720px) rotateX(${fx.toFixed(3)}deg) rotateY(${fy.toFixed(3)}deg)`;
+  requestAnimationFrame(tiltLoop);
+})();
+
+// ============================================================
+//  ELECTRIC PLACEMENT FX
+// ============================================================
+function spawnElectricFX(cellEl, player) {
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;border-radius:28px;';
+  cv.width=90; cv.height=90; cellEl.appendChild(cv);
+  const fc=cv.getContext('2d'), rgb=player==='X'?'0,240,255':'255,0,204', hex=player==='X'?'#00f0ff':'#ff00cc';
+  let frame=0;
+  (function draw() {
+    fc.clearRect(0,0,90,90);
+    if(frame>=28){cv.remove();return;}
+    const prog=frame/28, alpha=Math.pow(1-prog,1.35);
+    for(let i=0;i<9;i++){
+      const ang=(i/9)*Math.PI*2+(Math.random()-.5)*.5, len=(10+Math.random()*34)*(1-prog*.5);
+      fc.beginPath(); fc.moveTo(45,45);
+      for(let s=1;s<=5;s++){const tr=s/5,jit=(1-tr)*10; fc.lineTo(45+Math.cos(ang)*len*tr+(Math.random()-.5)*jit,45+Math.sin(ang)*len*tr+(Math.random()-.5)*jit);}
+      fc.strokeStyle=`rgba(${rgb},${alpha.toFixed(2)})`; fc.lineWidth=1.1+Math.random()*1.3;
+      fc.shadowColor=hex; fc.shadowBlur=14; fc.stroke();
+    }
+    if(frame<10){const r=12*(1-frame/10); fc.globalAlpha=(1-frame/10)*.52; fc.fillStyle=hex; fc.shadowColor=hex; fc.shadowBlur=30; fc.beginPath(); fc.arc(45,45,r,0,Math.PI*2); fc.fill(); fc.globalAlpha=1;}
+    frame++; requestAnimationFrame(draw);
+  })();
 }
 
-/* ===== PERFECTLY ALIGNED WINNING BEAMS ===== */
-function drawWinLine(combo, player){
-  const cells = [...document.querySelectorAll(".cell")];
+// ============================================================
+//  WIN BEAM
+// ============================================================
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let beamId=null;
+function drawWinBeam(combo,player) {
+  if(beamId){cancelAnimationFrame(beamId);beamId=null;}
+  winCtx.clearRect(0,0,CV_SZ,CV_SZ);
+  const {sx,sy,ex,ey}=getBeamPts(combo), col=player==='X'?'#00f0ff':'#ff00cc', colBt=player==='X'?'#aaf8ff':'#ffaaf5';
+  let w=52;
+  (function frame(){
+    winCtx.clearRect(0,0,CV_SZ,CV_SZ); winCtx.lineCap='round';
+    function ln(lw,style,blur){winCtx.beginPath();winCtx.lineWidth=lw;winCtx.strokeStyle=style;winCtx.shadowColor=style;winCtx.shadowBlur=blur;winCtx.moveTo(sx,sy);winCtx.lineTo(ex,ey);winCtx.stroke();}
+    ln(w*9,col+'0c',0); ln(w*4,col+'30',0); ln(w*2.2,col+'66',w*1.8); ln(w,col,w*3);
+    ln(Math.max(2.5,w*.38),colBt,14); winCtx.shadowBlur=0; ln(Math.max(1.2,w*.11),'rgba(255,255,255,0.98)',8);
+    if(w>9){w=Math.max(9,w*.86);beamId=requestAnimationFrame(frame);}else beamId=null;
+  })();
+}
 
-  // FIXED: Account for canvas offset (20px padding)
-  const canvasOffsetX = 20;
-  const canvasOffsetY = 20;
+// ============================================================
+//  WIN CHAOS
+// ============================================================
+let particles=[],rings=[],chaosLive=false,chaosId=null,shakePow=0;
+function triggerWinChaos(player) {
+  const col=player==='X'?'#00f0ff':'#ff00cc', br=boardEl.getBoundingClientRect();
+  const cx=br.left+br.width/2, cy=br.top+br.height/2;
+  particles=Array.from({length:100},()=>{
+    const a=Math.random()*Math.PI*2, spd=2+Math.random()*13;
+    return {x:cx+(Math.random()-.5)*br.width*.85,y:cy+(Math.random()-.5)*br.height*.85,
+            vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-2,life:1,decay:.011+Math.random()*.02,r:3+Math.random()*9,
+            col:Math.random()<.55?col:Math.random()<.5?'#fff':'#baff00'};
+  });
+  rings=[
+    {x:cx,y:cy,rad:0,maxRad:460,life:1,col,delay:0},
+    {x:cx,y:cy,rad:0,maxRad:340,life:1,col:'#ffffff',delay:5},
+    {x:cx,y:cy,rad:0,maxRad:560,life:1,col:'#baff00',delay:12},
+  ];
+  shakePow=18;
+  if(!chaosLive){chaosLive=true;animateChaos();}
+}
+function animateChaos() {
+  chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
+  let alive=false;
+  if(shakePow>.5){gameEl.style.transform=`translate(${(Math.random()-.5)*shakePow}px,${(Math.random()-.5)*shakePow}px)`;shakePow*=.87;alive=true;}
+  else{shakePow=0;gameEl.style.transform='';}
+  chaosCtx.save();
+  for(const p of particles){
+    if(p.life<=0) continue;
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.22;p.vx*=.975;p.life-=p.decay;
+    if(p.life<=0) continue;
+    const dr=p.r*p.life; if(dr<=0) continue;
+    alive=true; chaosCtx.globalAlpha=p.life; chaosCtx.fillStyle=p.col;
+    chaosCtx.shadowColor=p.col; chaosCtx.shadowBlur=18;
+    chaosCtx.beginPath(); chaosCtx.arc(p.x,p.y,dr,0,Math.PI*2); chaosCtx.fill();
+  }
+  chaosCtx.restore();
+  chaosCtx.save();
+  for(const r of rings){
+    if(r.delay>0){r.delay--;alive=true;continue;}
+    if(r.life<=0) continue;
+    r.rad+=15; r.life=Math.max(0,1-r.rad/r.maxRad);
+    if(!isFinite(r.rad)||r.rad<=0) continue;
+    alive=true; chaosCtx.globalAlpha=Math.max(0,r.life)*.88;
+    chaosCtx.strokeStyle=r.col; chaosCtx.shadowColor=r.col; chaosCtx.shadowBlur=32;
+    chaosCtx.lineWidth=5*r.life+1;
+    chaosCtx.beginPath(); chaosCtx.arc(r.x,r.y,r.rad,0,Math.PI*2); chaosCtx.stroke();
+  }
+  chaosCtx.restore();
+  if(alive) chaosId=requestAnimationFrame(animateChaos);
+  else{chaosLive=false;chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);}
+}
 
-  const getCenter = (el) => {
-    const rect = el.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-    
-    // Transform to canvas coordinates (inside padding)
-    return {
-      x: (rect.left - boardRect.left + rect.width/2) - canvasOffsetX,
-      y: (rect.top - boardRect.top + rect.height/2) - canvasOffsetY
+// ============================================================
+//  HELPER: mode label badge
+// ============================================================
+function modeLabel(player) {
+  // --- UI LOCK FIX START ---
+  // During gameOver the winner snapshot owns the display — badge would conflict.
+  // Return empty so no YOU/CPU badge appears alongside the winner text.
+  if(gameOver) return '';
+  // --- UI LOCK FIX END ---
+  if(!gameMode) return '';
+  if(gameMode==='ai'){
+    const hs=humanSymbol||'X';
+    return player===hs?'<span class="mode-badge you-badge">YOU</span>':'<span class="mode-badge cpu-badge">CPU</span>';
+  }
+  if(gameMode==='online'){
+    const ms=mySymbol||'X';
+    return player===ms?'<span class="mode-badge you-badge">YOU</span>':'<span class="mode-badge opp-badge">OPP</span>';
+  }
+  return '';
+}
+
+// ============================================================
+//  UI UPDATE
+// ============================================================
+function updateUI() {
+  // --- UI LOCK FIX START ---
+  // Block ALL calls when the round is over EXCEPT the one correct winner call
+  // that fires while isRoundActive is still true (see win/draw path below).
+  // Any subsequent stray call (AI callback, online sync, etc.) hits this guard.
+  if(!isRoundActive && gameOver) return;
+  // --- UI LOCK FIX END ---
+
+  // --- WINNER SNAPSHOT FIX START ---
+  const p1IsX = (gameOver && finalP1IsX !== null)
+    ? finalP1IsX
+    : (gameMode==='ai')    ? humanSymbol==='X'
+    : (gameMode==='online') ? mySymbol==='X'
+    : !swap;
+  // --- WINNER SNAPSHOT FIX END ---
+
+  const xScore = p1IsX ? playerScores.p1 : playerScores.p2;
+  const oScore = p1IsX ? playerScores.p2 : playerScores.p1;
+
+  if(isDraw){
+    [leftEl,rightEl].forEach(el=>{el.className='side draw-mode';el.innerHTML='<span class="drawBig">DRAW</span>';});
+    return;
+  }
+
+  // --- WINNER SNAPSHOT FIX START ---
+  const displaySwap = (gameOver && finalP1IsX !== null) ? !finalP1IsX : swap;
+  // --- WINNER SNAPSHOT FIX END ---
+
+  const xEl = displaySwap ? rightEl : leftEl;
+  const oEl = displaySwap ? leftEl  : rightEl;
+
+  function turnLabel(sym) {
+    if(gameOver && !isDraw) {
+      // --- GRAMMAR FIX START ---
+      if(sym === finalWinnerSym) return (finalWinnerPlayer === 'YOU' ? 'YOU WIN!' : finalWinnerPlayer + ' WINS!');
+      // --- GRAMMAR FIX END ---
+      return '';
+    }
+    if(sym !== current) return '';
+    if(gameMode==='ai')     return sym===humanSymbol ? 'YOUR TURN' : 'THINKING…';
+    if(gameMode==='online') return sym===mySymbol    ? 'YOUR TURN' : 'OPP TURN';
+    return 'TURN';
+  }
+
+  xEl.className='side x-player';
+  if(gameOver && finalWinnerSym==='X') xEl.classList.add('winner');
+  else if(!gameOver && current==='X')  xEl.classList.add('active');
+  xEl.innerHTML=`<span class="sym">X</span><span class="score-num">${xScore}</span><span class="status">${turnLabel('X')}</span>${modeLabel('X')}`;
+
+  oEl.className='side o-player';
+  if(gameOver && finalWinnerSym==='O') oEl.classList.add('winner');
+  else if(!gameOver && current==='O')  oEl.classList.add('active');
+  oEl.innerHTML=`<span class="sym">O</span><span class="score-num">${oScore}</span><span class="status">${turnLabel('O')}</span>${modeLabel('O')}`;
+}
+
+function updateRoundDisplay() {
+  // --- UI LOCK FIX START: block stray calls after round ends ---
+  if(!isRoundActive && gameOver) return;
+  // --- UI LOCK FIX END ---
+  const rt=document.getElementById('roundText');
+  if(rt) rt.textContent='ROUND '+Math.min(completedRounds+1,TOTAL_ROUNDS)+' / '+TOTAL_ROUNDS;
+}
+
+// ============================================================
+//  CLICK HANDLER
+// ============================================================
+boardEl.addEventListener('click', e => {
+  if(!gameMode) return;
+  // --- NEW CODE START: BLOCK INPUT DURING AI THINKING DELAY ---
+  if(aiThinking) return; // AI is mid-delay — player input locked
+  // --- NEW CODE END ---
+  if(gameMode==='ai'&&current!==humanSymbol&&!suppressAI) return;
+  if(gameMode==='online'&&current!==mySymbol&&!suppressOnline) return;
+  const cell=e.target.closest('.cell');
+  if(!cell||gameOver) return;
+  const i=parseInt(cell.dataset.i);
+  if(boardState[i]) return;
+
+  boardState[i]=current;
+  roundInProgress=true;
+
+  const mark=document.createElement('div');
+  mark.className=`mark ${current.toLowerCase()}`;
+  mark.textContent=current;
+  mark.style.animation='popIn 0.28s cubic-bezier(0.175,0.885,0.32,1.275) both';
+  mark.addEventListener('animationend',()=>{mark.style.animation='floatMark 2.4s ease-in-out infinite';},{once:true});
+  cell.appendChild(mark);
+
+  if(current==='X') playXSound(); else playOSound();
+  spawnElectricFX(cell,current);
+  applyClickTilt(i);
+
+  if(gameMode==='online'&&conn&&!suppressOnline){try{conn.send({type:'move',index:i});}catch(e){}}
+
+  const win=checkWin();
+  if(win){
+    gameOver=true; completedRounds++; roundInProgress=false;
+
+    // --- POLISH + SCORE FIX START: score by player identity, not by symbol ---
+    const p1SymbolThisRound = roundStartPlayer;
+    if(current === p1SymbolThisRound) playerScores.p1++;
+    else                               playerScores.p2++;
+    scores[current]++;
+    // --- POLISH + SCORE FIX END ---
+
+    // --- WINNER SNAPSHOT FIX START ---
+    // Snapshot MUST happen before any symbol toggle below.
+    // Compute p1IsX from PRE-TOGGLE values — humanSymbol/mySymbol not yet changed.
+    const _p1IsX = (gameMode==='ai')     ? humanSymbol==='X'
+                 : (gameMode==='online')  ? mySymbol==='X'
+                 : !swap;
+    const _isP1  = (current === p1SymbolThisRound);
+    finalWinnerSym    = current;   // locked — never overwritten until restart
+    finalP1IsX        = _p1IsX;   // locked — score display stays correct
+    finalWinnerPlayer = _isP1
+      ? (gameMode==='ai' ? 'YOU' : gameMode==='online' ? 'YOU' : 'P1')
+      : (gameMode==='ai' ? 'CPU' : gameMode==='online' ? 'OPP' : 'P2');
+    // --- WINNER SNAPSHOT FIX END ---
+
+    // Symbol toggle happens NOW — after snapshot is safely stored
+    roundStartPlayer=roundStartPlayer==='X'?'O':'X';
+    if(gameMode==='ai')     humanSymbol=roundStartPlayer;
+    if(gameMode==='online') mySymbol=mySymbol==='X'?'O':'X';
+    // isRoundActive is still TRUE here → this single updateUI() call renders correctly
+    updateUI(); updateRoundDisplay(); updateScoreBar();
+    // --- UI LOCK FIX START ---
+    // Lock UI NOW — any subsequent updateUI() call is blocked until restart
+    isRoundActive = false;
+    // --- UI LOCK FIX END ---
+    highlightWinCells(win, current);
+    drawWinBeam(win,current); playBeamSound();
+    setTimeout(()=>{triggerWinChaos(current);playWinSound();},80);
+    if(completedRounds>=TOTAL_ROUNDS) setTimeout(showMatchOver,2400);
+    return;
+  }
+  if(boardState.every(v=>v)){
+    gameOver=true; isDraw=true; completedRounds++; roundInProgress=false;
+    // --- WINNER SNAPSHOT FIX START: draw — clear snapshot, no winner ---
+    finalWinnerSym=null; finalWinnerPlayer=null; finalP1IsX=null;
+    // --- WINNER SNAPSHOT FIX END ---
+    roundStartPlayer=roundStartPlayer==='X'?'O':'X';
+    if(gameMode==='ai')     humanSymbol=roundStartPlayer;
+    if(gameMode==='online') mySymbol=mySymbol==='X'?'O':'X';
+    highlightDrawCells();
+    // isRoundActive still TRUE here → this updateUI() renders DRAW correctly
+    updateUI(); updateRoundDisplay(); updateScoreBar();
+    // --- UI LOCK FIX START ---
+    isRoundActive = false;
+    // --- UI LOCK FIX END ---
+    playDrawSound();
+    if(completedRounds>=TOTAL_ROUNDS) setTimeout(showMatchOver,2400);
+    return;
+  }
+  current=current==='X'?'O':'X';
+  updateUI();
+  if(gameMode==='ai'&&!gameOver&&current!==humanSymbol) {
+    // --- POLISH: show AI thinking shimmer on board ---
+    boardEl.classList.add('ai-thinking');
+    doAIMove();
+  }
+});
+
+function checkWin() {
+  return WINS.find(([a,b,c])=>boardState[a]&&boardState[a]===boardState[b]&&boardState[a]===boardState[c])??null;
+}
+
+// ============================================================
+//  RESTART
+// ============================================================
+restBtn.addEventListener('click',()=>{
+  roundInProgress=false;
+  aiThinking=false;
+  // --- WINNER SNAPSHOT FIX START: clear snapshot so next round starts fresh ---
+  finalWinnerSym=null; finalWinnerPlayer=null; finalP1IsX=null;
+  // --- WINNER SNAPSHOT FIX END ---
+  // --- UI LOCK FIX START: re-enable UI updates for the new round ---
+  isRoundActive = true;
+  // --- UI LOCK FIX END ---
+  clearCellHighlights();
+  boardState=Array(9).fill(null); gameOver=false; isDraw=false;
+  current=roundStartPlayer; swap=current==='O';
+  if(gameMode==='ai') humanSymbol=roundStartPlayer;
+  if(gameMode==='online'&&conn){try{conn.send({type:'restart'});}catch(e){}}
+  document.querySelectorAll('.cell').forEach(c=>c.innerHTML='');
+  if(beamId){cancelAnimationFrame(beamId);beamId=null;}
+  winCtx.clearRect(0,0,CV_SZ,CV_SZ);
+  if(chaosId){cancelAnimationFrame(chaosId);chaosId=null;}
+  chaosLive=false; chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
+  gameEl.style.transform='';
+  playResetSound(); updateUI();
+});
+
+// ============================================================
+//  SVG SYMBOL ORBITS & FLICKER
+// ============================================================
+const orb1=document.getElementById('orb1'),orb2=document.getElementById('orb2');
+const orb3=document.getElementById('orb3'),orb4=document.getElementById('orb4');
+let orbitA=0;
+(function orbitLoop(){
+  orbitA+=.016;
+  if(orb1){orb1.setAttribute('cx',(44*Math.cos(orbitA)).toFixed(2));orb1.setAttribute('cy',(44*Math.sin(orbitA)).toFixed(2));}
+  if(orb2){orb2.setAttribute('cx',(44*Math.cos(orbitA+Math.PI)).toFixed(2));orb2.setAttribute('cy',(44*Math.sin(orbitA+Math.PI)).toFixed(2));}
+  if(orb3){orb3.setAttribute('cx',(34*Math.cos(-orbitA*1.3)).toFixed(2));orb3.setAttribute('cy',(34*Math.sin(-orbitA*1.3)).toFixed(2));}
+  if(orb4){orb4.setAttribute('cx',(34*Math.cos(-orbitA*1.3+Math.PI)).toFixed(2));orb4.setAttribute('cy',(34*Math.sin(-orbitA*1.3+Math.PI)).toFixed(2));}
+  requestAnimationFrame(orbitLoop);
+})();
+
+const nwArm=document.getElementById('nwArm'),oCircle=document.getElementById('oCircle');
+const goldNE=document.getElementById('goldNE'),goldSW=document.getElementById('goldSW');
+const nwTipDot=document.getElementById('nwTipDot'),debrisGrp=document.getElementById('debrisGroup');
+function doTitleFlicker(){
+  const shots=8+Math.floor(Math.random()*7); let count=0;
+  const iv=setInterval(()=>{
+    const on=count%2===0;
+    if(nwArm){nwArm.setAttribute('opacity',on?'0.04':'1');nwArm.setAttribute('stroke',on?'#ffffff':'#00f0ff');}
+    if(oCircle){oCircle.setAttribute('stroke-dasharray',on?'3 8 2 5':'');oCircle.setAttribute('opacity',on?'0.38':'1');}
+    if(goldNE) goldNE.setAttribute('opacity',on?'0.12':'1');
+    if(goldSW) goldSW.setAttribute('opacity',on?'0.12':'1');
+    if(nwTipDot) nwTipDot.setAttribute('fill',on?'#ff0033':'#ffffff');
+    count++;
+    if(count>=shots){clearInterval(iv);
+      if(nwArm){nwArm.setAttribute('opacity','1');nwArm.setAttribute('stroke','#00f0ff');}
+      if(oCircle){oCircle.removeAttribute('stroke-dasharray');oCircle.setAttribute('opacity','1');}
+      if(goldNE) goldNE.setAttribute('opacity','1');
+      if(goldSW) goldSW.setAttribute('opacity','1');
+      if(nwTipDot) nwTipDot.setAttribute('fill','#ffffff');
+    }
+  },45+Math.random()*30);
+}
+(function schedFlicker(){setTimeout(()=>{doTitleFlicker();schedFlicker();},12000+Math.random()*8000);})();
+
+// ============================================================
+//  MODE SCREEN HELPERS
+// ============================================================
+const modeScreenEl      = document.getElementById('modeScreen');
+const lobbyScreenEl     = document.getElementById('lobbyScreen');
+const matchOverScreenEl = document.getElementById('matchOverScreen');
+const roundDisplayEl    = document.getElementById('roundDisplay');
+const backBtnEl         = document.getElementById('backBtn');
+
+function showModeScreen(){
+  modeScreenEl.classList.add('active');
+  lobbyScreenEl.classList.remove('active');
+  matchOverScreenEl.classList.remove('active');
+  roundDisplayEl.style.display='none';
+  backBtnEl.style.display='none';
+  restBtn.style.display='none';
+  // --- POLISH: hide scorebar in menu ---
+  hideScoreBar();
+  gameMode=null; disconnectOnline();
+}
+function hideModeScreen(){
+  modeScreenEl.classList.remove('active');
+  lobbyScreenEl.classList.remove('active');
+  roundDisplayEl.style.display='block';
+  backBtnEl.style.display='block';
+  restBtn.style.display='';
+}
+function showMatchOver(){
+  matchOverScreenEl.classList.add('active');
+  // --- POLISH + SCORE FIX START: winner determined by player identity, not symbol ---
+  const p1W = playerScores.p1, p2W = playerScores.p2;
+  let winLine, scoreLine;
+
+  if(p1W > p2W) {
+    winLine = gameMode === 'ai'
+      ? '<span style="color:#00f0ff;font-size:38px">YOU WIN!</span>'
+      : '<span style="color:#00f0ff;font-size:38px">PLAYER 1 WINS!</span>';
+  } else if(p2W > p1W) {
+    winLine = gameMode === 'ai'
+      ? '<span style="color:#ff00cc;font-size:38px">AI WINS!</span>'
+      : (gameMode === 'online'
+          ? '<span style="color:#ff00cc;font-size:38px">OPPONENT WINS!</span>'
+          : '<span style="color:#ff00cc;font-size:38px">PLAYER 2 WINS!</span>');
+  } else {
+    winLine = '<span style="color:#baff00;font-size:38px">IT\'S A TIE!</span>';
+  }
+
+  const p1Label = gameMode === 'ai' ? 'YOU' : (gameMode === 'online' ? 'HOST' : 'P1');
+  const p2Label = gameMode === 'ai' ? 'CPU' : (gameMode === 'online' ? 'GUEST' : 'P2');
+  scoreLine = `<div style="margin-top:16px;font-size:22px;letter-spacing:3px;opacity:.8">${p1Label}: ${p1W} &nbsp;—&nbsp; ${p2Label}: ${p2W}</div>`;
+  // --- POLISH + SCORE FIX END ---
+
+  const r = document.getElementById('matchResult');
+  if(r) r.innerHTML = winLine + scoreLine;
+}
+function fullReset(){
+  completedRounds=0; roundInProgress=false;
+  scores.X=0; scores.O=0;
+  playerScores.p1=0; playerScores.p2=0;
+  // --- WINNER SNAPSHOT FIX START: clear snapshot on full match reset ---
+  finalWinnerSym=null; finalWinnerPlayer=null; finalP1IsX=null;
+  // --- WINNER SNAPSHOT FIX END ---
+  // --- UI LOCK FIX START: re-enable UI for new match ---
+  isRoundActive = true;
+  // --- UI LOCK FIX END ---
+  matchOverScreenEl.classList.remove('active');
+  clearCellHighlights();
+  boardState=Array(9).fill(null); gameOver=false; isDraw=false;
+  current=roundStartPlayer; swap=current==='O';
+  if(gameMode==='ai') humanSymbol=roundStartPlayer;
+  document.querySelectorAll('.cell').forEach(c=>c.innerHTML='');
+  if(beamId){cancelAnimationFrame(beamId);beamId=null;}
+  winCtx.clearRect(0,0,CV_SZ,CV_SZ);
+  if(chaosId){cancelAnimationFrame(chaosId);chaosId=null;}
+  chaosLive=false; chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
+  gameEl.style.transform='';
+  showScoreBar(); updateScoreBar();
+  updateRoundDisplay(); updateUI();
+}
+function disconnectOnline(){
+  if(conn){try{conn.close();}catch(e){}} conn=null;
+  if(peer){try{peer.destroy();}catch(e){}} peer=null;
+  mySymbol='X';
+}
+
+// ============================================================
+//  ONLINE DATA HANDLER
+// ============================================================
+function handleOnlineData(data){
+  if(!data||!data.type) return;
+  if(data.type==='move'){
+    const idx=data.index;
+    if(typeof idx!=='number'||boardState[idx]||gameOver) return;
+    const cellEl=document.querySelectorAll('.cell')[idx];
+    if(!cellEl) return;
+    suppressOnline=true; cellEl.click(); suppressOnline=false;
+  }
+  if(data.type==='restart'){
+    suppressOnline=true; roundInProgress=false;
+    boardState=Array(9).fill(null); gameOver=false; isDraw=false; current=roundStartPlayer;
+    document.querySelectorAll('.cell').forEach(c=>c.innerHTML='');
+    if(beamId){cancelAnimationFrame(beamId);beamId=null;}
+    winCtx.clearRect(0,0,CV_SZ,CV_SZ);
+    if(chaosId){cancelAnimationFrame(chaosId);chaosId=null;}
+    chaosLive=false; chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
+    gameEl.style.transform=''; suppressOnline=false; updateUI();
+  }
+}
+
+// ============================================================
+//  ONLINE SETUP
+// ============================================================
+function setupPeer(asHost){
+  if(typeof Peer==='undefined'){
+    const st=document.getElementById('lobbyStatus');
+    if(st) st.textContent='⚠ PeerJS unavailable. Check internet.';
+    return;
+  }
+  disconnectOnline(); mySymbol=asHost?'X':'O';
+  peer=new Peer(undefined,{debug:0});
+  peer.on('error',err=>{const st=document.getElementById('lobbyStatus');if(st) st.textContent='Error: '+err.type;});
+  if(asHost){
+    document.getElementById('lobbyChoice').style.display='none';
+    document.getElementById('lobbyHostPanel').style.display='block';
+    document.getElementById('lobbyStatus').textContent='Getting room code…';
+    peer.on('open',id=>{const rc=document.getElementById('roomCode');if(rc) rc.textContent=id;document.getElementById('lobbyStatus').textContent='Ready — share the code!';});
+    peer.on('connection',c=>{
+      conn=c;
+      conn.on('open',()=>{document.getElementById('waitingMsg').innerHTML='✅ Opponent connected! Starting…';setTimeout(()=>{gameMode='online';hideModeScreen();fullReset();},800);});
+      conn.on('data',handleOnlineData);
+      conn.on('close',()=>{if(gameMode==='online'){alert('Opponent disconnected.');showModeScreen();}});
+    });
+  } else {
+    document.getElementById('lobbyChoice').style.display='none';
+    document.getElementById('lobbyGuestPanel').style.display='block';
+    document.getElementById('lobbyStatus').textContent="Enter the host's room code:";
+    document.getElementById('btnJoin').onclick=()=>{
+      const code=document.getElementById('codeInput').value.trim();
+      if(!code) return;
+      const js=document.getElementById('joinStatus');
+      if(js) js.textContent='Connecting…';
+      function doConnect(){
+        conn=peer.connect(code,{reliable:true});
+        conn.on('open',()=>{if(js)js.textContent='✅ Connected!';setTimeout(()=>{gameMode='online';hideModeScreen();fullReset();},600);});
+        conn.on('data',handleOnlineData);
+        conn.on('close',()=>{if(gameMode==='online'){alert('Connection lost.');showModeScreen();}});
+        conn.on('error',err=>{if(js)js.textContent='Failed: '+err;});
+      }
+      if(peer.open) doConnect(); else peer.on('open',doConnect);
     };
-  };
+  }
+}
 
-  const start = getCenter(cells[combo[0]]);
-  const end = getCenter(cells[combo[2]]);
+// ============================================================
+//  AI  — upgraded priority system + human-like imperfection
+// --- NEW CODE START: AI UPGRADE ---
+//
+//  SYMBOL SYSTEM (round-based, not winner-based):
+//    humanSymbol tracks which mark the human plays THIS round.
+//    It toggles after every completed round (win or draw).
+//    The AI always plays the opposite symbol.
+//    After a full 5-round match, roundStartPlayer carries over
+//    so the next match opens with the opposite starting symbol.
+//
+//  AI PRIORITY ORDER (when playing optimally):
+//    1. Take an immediate WIN
+//    2. BLOCK the human's immediate win
+//    3. Create a FORK (two winning threats at once)
+//    4. Block a FORK the human is about to create
+//    5. Take CENTER if free
+//    6. Take an opposite CORNER (classic counter-play)
+//    7. Take any free CORNER
+//    8. Take any free EDGE
+//
+//  IMPERFECTION (30% of turns):
+//    Still wins/blocks immediate mate-in-1 (feels natural,
+//    not like the AI is gift-wrapping a win), but skips all
+//    strategic planning and picks randomly from empty cells.
+//    This breaks the draw-loop and makes the game feel alive.
+//
+//  THINKING DELAY (300–800 ms):
+//    aiThinking=true locks player input.
+//    After the delay the AI places its mark and unlocks input.
+// ============================================================
 
-  const color = player === "X" ? "#00f0ff" : "#ff00cc";
-  
-  let progress = 0;
-  const animationDuration = 1500;
-  const startTime = performance.now();
+function findWinMove(sym) {
+  // Returns first index that gives sym an immediate win, or -1
+  for (let i = 0; i < WINS.length; i++) {
+    const [a, b, c] = WINS[i];
+    const row = [boardState[a], boardState[b], boardState[c]];
+    if (row.filter(v => v === sym).length === 2 && row.indexOf(null) !== -1)
+      return WINS[i][row.indexOf(null)];
+  }
+  return -1;
+}
 
-  function animateBeam(currentTime) {
-    const elapsed = currentTime - startTime;
-    progress = Math.min(elapsed / animationDuration, 1);
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function findFork(sym) {
+  // Returns a move that creates ≥2 winning threats, or -1
+  const empty = [];
+  for (let i = 0; i < 9; i++) if (!boardState[i]) empty.push(i);
+  for (const idx of empty) {
+    boardState[idx] = sym;
+    let threats = 0;
+    for (const [a, b, c] of WINS) {
+      const row = [boardState[a], boardState[b], boardState[c]];
+      if (row.filter(v => v === sym).length === 2 && row.indexOf(null) !== -1) threats++;
+    }
+    boardState[idx] = null;
+    if (threats >= 2) return idx;
+  }
+  return -1;
+}
 
-    // 🔥 STRONGER MULTI-LAYER BEAM (WITH SOLID CORE)
-    const outerW = 52 - (progress * 34);
-    const midW   = 30 - (progress * 18);
-    const coreW  = 16 - (progress * 6);
+function randomEmpty() {
+  const empty = [];
+  for (let i = 0; i < 9; i++) if (!boardState[i]) empty.push(i);
+  return empty.length ? empty[Math.floor(Math.random() * empty.length)] : -1;
+}
 
-    // OUTER GLOW
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = player === "X" ? "#00ffff" : "#ff00cc";
-    ctx.shadowColor = ctx.strokeStyle;
-    ctx.shadowBlur = 70 - (progress * 45);
-    ctx.lineWidth = Math.max(outerW, 10);
-    ctx.lineCap = "round";
+function getBestMove(aiSym, humanSym) {
+  // 1. Win
+  let m = findWinMove(aiSym);   if (m !== -1) return m;
+  // 2. Block human win
+  m = findWinMove(humanSym);    if (m !== -1) return m;
+  // 3. Fork
+  m = findFork(aiSym);          if (m !== -1) return m;
+  // 4. Block human fork
+  m = findFork(humanSym);       if (m !== -1) return m;
+  // 5. Center
+  if (!boardState[4]) return 4;
+  // 6. Opposite corner (if human is in a corner, take the diagonal opposite)
+  const oppCorners = [[0,8],[2,6],[6,2],[8,0]];
+  for (const [f, t] of oppCorners) {
+    if (boardState[f] === humanSym && !boardState[t]) return t;
+  }
+  // 7. Any free corner
+  const corners = [0,2,6,8].filter(i => !boardState[i]);
+  if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+  // 8. Any free edge
+  const edges = [1,3,5,7].filter(i => !boardState[i]);
+  if (edges.length) return edges[Math.floor(Math.random() * edges.length)];
+  return -1;
+}
 
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.stroke();
+function doAIMove() {
+  const aiSym    = humanSymbol === 'X' ? 'O' : 'X';
+  const humanSym = humanSymbol;
 
-    // MID LAYER
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 35 - (progress * 20);
-    ctx.lineWidth = Math.max(midW, 10);
+  // Safety guards — only fire when it's genuinely the AI's turn
+  if (gameOver || current !== aiSym || gameMode !== 'ai') return;
 
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.stroke();
+  // Lock player input and start thinking delay (300–800 ms)
+  aiThinking = true;
+  const delay = 300 + Math.floor(Math.random() * 501); // 300–800 ms
 
-    // 💥 CORE (THIS FIXES VISIBILITY)
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 10;
-    ctx.lineWidth = Math.max(coreW, 8);
+  setTimeout(() => {
+    // Re-check game is still live (player didn't restart mid-think)
+    if (gameOver || current !== aiSym || gameMode !== 'ai') {
+      aiThinking = false;
+      return;
+    }
 
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.stroke();
+    let move = -1;
 
-    ctx.globalAlpha = 1;
+    // 30% chance: play IMPERFECT move (random, but still instant-wins/blocks)
+    if (Math.random() < 0.30) {
+      // Even on "random" turns, don't ignore a winning move or an immediate loss —
+      // that would feel like the AI is cheating the player by accident
+      move = findWinMove(aiSym);
+      if (move === -1) move = findWinMove(humanSym);
+      if (move === -1) move = randomEmpty(); // genuinely random from here
+    } else {
+      // 70% chance: play OPTIMAL move via priority chain
+      move = getBestMove(aiSym, humanSym);
+    }
 
-    if (progress < 1) {
-      requestAnimationFrame(animateBeam);
+    // Fallback — should never be needed but guarantees no stuck state
+    if (move === -1) move = randomEmpty();
+
+    // --- AI FIX START ---
+    // CRITICAL ORDER: aiThinking must be cleared BEFORE cellEl.click().
+    // The click handler checks `if(aiThinking) return` as its very first guard.
+    // If aiThinking is still true when the AI calls cellEl.click(), the handler
+    // exits immediately and the AI move is silently swallowed → board freezes.
+    // Clearing it first lets the AI's simulated click pass through normally.
+    // suppressAI stays true during the click so the AI-turn gate also passes.
+    if (move !== -1) {
+      const cellEl = document.querySelectorAll('.cell')[move];
+      if (cellEl) {
+        // --- POLISH: remove thinking shimmer before placing ---
+        boardEl.classList.remove('ai-thinking');
+        aiThinking = false;  // unlock BEFORE click — prevents self-block
+        suppressAI = true;
+        cellEl.click();
+        suppressAI = false;
+      } else {
+        boardEl.classList.remove('ai-thinking');
+        aiThinking = false;  // cell not found — still must unlock
+      }
+    } else {
+      boardEl.classList.remove('ai-thinking');
+      aiThinking = false;    // no move found (full board) — unlock
+    }
+    // --- AI FIX END ---
+  }, delay);
+}
+// --- NEW CODE END: AI UPGRADE ---
+
+// ============================================================
+//  MODE BUTTON LISTENERS
+// ============================================================
+document.getElementById('btnAI').addEventListener('click',()=>{gameMode='ai';hideModeScreen();fullReset();});
+document.getElementById('btnOnline').addEventListener('click',()=>{
+  modeScreenEl.classList.remove('active');
+  lobbyScreenEl.classList.add('active');
+  document.getElementById('lobbyChoice').style.display='flex';
+  document.getElementById('lobbyHostPanel').style.display='none';
+  document.getElementById('lobbyGuestPanel').style.display='none';
+  document.getElementById('lobbyStatus').textContent='Choose your role:';
+  backBtnEl.style.display='block';
+});
+document.getElementById('btnHost').addEventListener('click',()=>setupPeer(true));
+document.getElementById('btnGuest').addEventListener('click',()=>setupPeer(false));
+document.getElementById('btnRematch').addEventListener('click',()=>{matchOverScreenEl.classList.remove('active');fullReset();});
+document.getElementById('btnModeSelect').addEventListener('click',showModeScreen);
+backBtnEl.addEventListener('click',()=>{disconnectOnline();showModeScreen();});
+
+// Init — show mode screen, hide game controls
+restBtn.style.display='none';
+roundDisplayEl.style.display='none';
+backBtnEl.style.display='none';
+updateUI();
+
+// --- NEW CODE START: ONLINE STATUS HUD — isolated JS logic ---
+// Lightweight. Single setTimeout loop. Zero connection to game state.
+// Alien charset used for surrounding text; number stays readable.
+// -----------------------------------------------------------
+(function initStatusHUD(){
+  const ALIEN = ['⌬','⟁','⍋','⎋','⏃','⟊','⌖','⊕','⊗','▒','⌘','⍟','⏚','⟔','⍦','⎈','▓','░','꙰','⌯'];
+  const PHRASES = [
+    '⌬ ⟁ ⍋ ⎋ ⏃ ⟊ ⌖',
+    '⊕ ⌘ ⍟ ⏚ ⟔ ⍦',
+    '⎈ ▒ ⌯ ⏃ ⌬ ⟁',
+    '⍋ ⊗ ⟊ ⌖ ⎋ ⊕',
+    '⏚ ⌘ ▓ ⍟ ⟔ ⌬',
+    '⟁ ⌖ ⎈ ⍦ ⊕ ░ ⌯',
+  ];
+  const COUNT_SUFFIX = [
+    '░▒▓ SIGNAL',
+    '⌬⟁ ONLINE',
+    '⍋⎋ ACTIVE',
+    '▒▓░ LINKED',
+    '⊕⌘ PRESENT',
+  ];
+
+  const alienEl = document.getElementById('statusAlien');
+  const countEl = document.getElementById('statusCount');
+  let playerCount = 1;
+
+  function randAlien(n){ let s=''; for(let i=0;i<n;i++) s+=ALIEN[Math.floor(Math.random()*ALIEN.length)]; return s; }
+
+  function updateDisplay(count){
+    playerCount = count;
+    alienEl.textContent = PHRASES[Math.floor(Math.random()*PHRASES.length)];
+    const suf = COUNT_SUFFIX[Math.floor(Math.random()*COUNT_SUFFIX.length)];
+    countEl.textContent = count + ' ' + suf;
+  }
+
+  // Simulate count changes — completely random, totally isolated
+  function schedNext(){
+    setTimeout(()=>{
+      // 60% stay, 25% flip to 2, 15% flip to 1
+      const roll = Math.random();
+      let next = playerCount;
+      if     (roll < 0.60) next = playerCount;
+      else if (roll < 0.85) next = playerCount === 1 ? 2 : 1;
+      else                  next = playerCount === 2 ? 1 : 2;
+      updateDisplay(next);
+      schedNext();
+    }, 8000 + Math.random() * 14000); // 8–22 s between changes
+  }
+
+  // Initial display, then start loop
+  updateDisplay(1);
+  schedNext();
+})();
+// --- NEW CODE END: ONLINE STATUS HUD ---
+
+// ============================================================
+// THREE.JS 3D DIGITAL PRISON
+// ============================================================
+(function initDigitalPrison(){
+  if(typeof THREE==='undefined') return;
+
+  const scene=new THREE.Scene();
+  const W=window.innerWidth, H=window.innerHeight;
+  const camera=new THREE.PerspectiveCamera(72,W/H,.1,200);
+  camera.position.set(0,.5,0); camera.lookAt(0,.5,-1);
+
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(W,H); renderer.setClearColor(0x000000,0);
+  renderer.domElement.id='envCanvas';
+  renderer.domElement.style.cssText='position:fixed;top:0;left:0;z-index:2;pointer-events:none;';
+  document.body.insertBefore(renderer.domElement,document.body.firstChild);
+
+  const envGroup=new THREE.Group(); scene.add(envGroup);
+  envGroup.rotation.order='YXZ';
+  const envMats=[];
+
+  function mkLine(pts,color,opacity){
+    const g=new THREE.BufferGeometry().setFromPoints(pts);
+    const m=new THREE.LineBasicMaterial({color,transparent:true,opacity});
+    m._baseColor=color; m._baseOpacity=opacity; envMats.push(m);
+    envGroup.add(new THREE.Line(g,m)); return m;
+  }
+
+  const OUR=22,OUH=14;
+  for(let i=0;i<32;i++){
+    const a=(i/32)*Math.PI*2, x=OUR*Math.cos(a), z=OUR*Math.sin(a), ip=i%4===0;
+    mkLine([new THREE.Vector3(x,-OUH/2,z),new THREE.Vector3(x,OUH/2,z)],ip?0x004477:0x001e38,ip?.60:.28);
+  }
+  for(let j=0;j<=7;j++){
+    const y=-OUH/2+(j/7)*OUH, pts=[], key=j===0||j===7||j===3||j===4;
+    for(let i=0;i<=96;i++){const a=(i/96)*Math.PI*2;pts.push(new THREE.Vector3(OUR*Math.cos(a),y,OUR*Math.sin(a)));}
+    mkLine(pts,key?0x005599:0x002244,key?.50:.22);
+  }
+  const CAGER=11,CAGEH=9,CAGEN=20;
+  for(let i=0;i<CAGEN;i++){
+    const a=(i/CAGEN)*Math.PI*2, x=CAGER*Math.cos(a), z=CAGER*Math.sin(a);
+    mkLine([new THREE.Vector3(x,-CAGEH/2,z),new THREE.Vector3(x,CAGEH/2,z)],0x0077aa,.65);
+  }
+  for(const y of[-CAGEH/2,CAGEH/2]){
+    const pts=[];
+    for(let i=0;i<=80;i++){const a=(i/80)*Math.PI*2;pts.push(new THREE.Vector3(CAGER*Math.cos(a),y,CAGER*Math.sin(a)));}
+    mkLine(pts,0x00aadd,.75);
+  }
+  {const pts=[];for(let i=0;i<=80;i++){const a=(i/80)*Math.PI*2;pts.push(new THREE.Vector3(CAGER*Math.cos(a),.5,CAGER*Math.sin(a)));}mkLine(pts,0x00ddff,.90);}
+  const GN=18,GS=44;
+  for(let i=0;i<=GN;i++){
+    const t=-GS/2+(i/GN)*GS, b=i===0||i===GN||i===GN/2;
+    mkLine([new THREE.Vector3(-GS/2,-OUH/2,t),new THREE.Vector3(GS/2,-OUH/2,t)],b?0x003f66:0x001a2e,b?.45:.20);
+    mkLine([new THREE.Vector3(t,-OUH/2,-GS/2),new THREE.Vector3(t,-OUH/2,GS/2)],b?0x003f66:0x001a2e,b?.45:.20);
+  }
+  for(let i=0;i<10;i++){
+    const a=(i/10)*Math.PI*2, panR=OUR*.85, px=panR*Math.cos(a), pz=panR*Math.sin(a);
+    const py=(Math.random()-.5)*5, pw=3.8+Math.random()*1.8, ph=2.5+Math.random()*1.2;
+    const wfG=new THREE.WireframeGeometry(new THREE.PlaneGeometry(pw,ph,5,4));
+    const m=new THREE.LineBasicMaterial({color:0x003a55,transparent:true,opacity:.48});
+    m._baseColor=0x003a55;m._baseOpacity=.48;envMats.push(m);
+    const panel=new THREE.LineSegments(wfG,m);
+    panel.position.set(px,py,pz); panel.rotation.y=-a; envGroup.add(panel);
+    const hw=pw/2,hh=ph/2;
+    const fm=new THREE.LineBasicMaterial({color:0x005577,transparent:true,opacity:.65});
+    fm._baseColor=0x005577;fm._baseOpacity=.65;envMats.push(fm);
+    const frameL=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-hw,-hh,0),new THREE.Vector3(hw,-hh,0),
+      new THREE.Vector3(hw,hh,0),new THREE.Vector3(-hw,hh,0),new THREE.Vector3(-hw,-hh,0)
+    ]),fm);
+    frameL.position.set(px,py,pz); frameL.rotation.y=-a; envGroup.add(frameL);
+  }
+  const BRACE_N=8;
+  for(let i=0;i<BRACE_N;i++){
+    const a0=(i/BRACE_N)*Math.PI*2, a1=((i+1)/BRACE_N)*Math.PI*2;
+    const x0=OUR*Math.cos(a0),z0=OUR*Math.sin(a0),x1=OUR*Math.cos(a1),z1=OUR*Math.sin(a1);
+    mkLine([new THREE.Vector3(x0,OUH/2,z0),new THREE.Vector3(x1,-OUH/2,z1)],0x002244,.22);
+    mkLine([new THREE.Vector3(x0,-OUH/2,z0),new THREE.Vector3(x1,OUH/2,z1)],0x002244,.22);
+  }
+  const PNUM=200, pPos=new Float32Array(PNUM*3), pVel=[];
+  for(let i=0;i<PNUM;i++){
+    const a=Math.random()*Math.PI*2, r=CAGER+Math.random()*(OUR-CAGER-1);
+    pPos[i*3+0]=r*Math.cos(a); pPos[i*3+1]=(Math.random()-.5)*OUH; pPos[i*3+2]=r*Math.sin(a);
+    pVel.push({vy:(Math.random()-.5)*.004,va:(Math.random()-.5)*.0015,r,baseA:a});
+  }
+  const pGeom=new THREE.BufferGeometry();
+  pGeom.setAttribute('position',new THREE.Float32BufferAttribute(pPos,3));
+  const pMat=new THREE.PointsMaterial({color:0x00ccee,size:.07,transparent:true,opacity:.75});
+  pMat._baseColor=0x00ccee;pMat._baseOpacity=.75;envMats.push(pMat);
+  envGroup.add(new THREE.Points(pGeom,pMat));
+  let pTime=0;
+  function updateParticles(dt){
+    pTime+=dt;
+    const posArr=pGeom.attributes.position.array;
+    for(let i=0;i<PNUM;i++){
+      const v=pVel[i];
+      posArr[i*3+1]+=v.vy;
+      if(posArr[i*3+1]>OUH/2) posArr[i*3+1]=-OUH/2;
+      if(posArr[i*3+1]<-OUH/2) posArr[i*3+1]=OUH/2;
+      const a=v.baseA+pTime*v.va;
+      posArr[i*3+0]=v.r*Math.cos(a); posArr[i*3+2]=v.r*Math.sin(a);
+    }
+    pGeom.attributes.position.needsUpdate=true;
+  }
+  for(const [y,col,op] of [[.5,0x00eeff,.90],[2.5,0x0088bb,.55],[-2,0x0088bb,.55]]){
+    const pts=[];
+    for(let i=0;i<=96;i++){const a=(i/96)*Math.PI*2;pts.push(new THREE.Vector3(CAGER*Math.cos(a),y,CAGER*Math.sin(a)));}
+    mkLine(pts,col,op);
+  }
+
+  // Camera drag
+  let envAutoYaw=0,dragYaw=0,dragPitch=0,dragVelX=0,dragVelY=0,isDraggingEnv=false,lastDragX=0,lastDragY=0;
+  const GAME_ELS='#board,#restart,.side,#title,button,.cell,.mark,svg,canvas,#modeScreen,#lobbyScreen,#matchOverScreen,#backBtn';
+  document.addEventListener('mousedown',e=>{
+    if(e.target.closest(GAME_ELS)) return;
+    isDraggingEnv=true; lastDragX=e.clientX; lastDragY=e.clientY; dragVelX=0; dragVelY=0;
+    document.body.classList.add('env-grabbing');
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!isDraggingEnv) return;
+    const dx=e.clientX-lastDragX, dy=e.clientY-lastDragY;
+    dragVelX=dx; dragVelY=dy;
+    dragYaw-=dx*.005; dragPitch+=dy*.005;
+    lastDragX=e.clientX; lastDragY=e.clientY;
+  });
+  document.addEventListener('mouseup',()=>{isDraggingEnv=false;document.body.classList.remove('env-grabbing');});
+
+  // Glitch wave canvas
+  const glWaveCv=document.createElement('canvas');
+  glWaveCv.id='glitchWaveCanvas';
+  glWaveCv.width=window.innerWidth; glWaveCv.height=window.innerHeight;
+  glWaveCv.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:998;';
+  document.body.appendChild(glWaveCv);
+  const glCtx=glWaveCv.getContext('2d');
+  window.addEventListener('resize',()=>{glWaveCv.width=window.innerWidth;glWaveCv.height=window.innerHeight;});
+
+  let glitchWaveId=null, envGlitching=false, glitchMidFired=false;
+
+  function envMaterialState(state){
+    envMats.forEach(m=>{
+      if(!m.color) return;
+      switch(state){
+        case 0: if(m._savedHex!=null){m.color.set(m._savedHex);m._savedHex=null;} m.opacity=m._baseOpacity; break;
+        case 1: if(m._savedHex==null)m._savedHex=m.color.getHex(); m.color.set(0x00ffee); m.opacity=Math.min(1,m._baseOpacity*4.5); break;
+        case 2: if(m._savedHex==null)m._savedHex=m.color.getHex(); m.color.set(0xff00cc); m.opacity=Math.min(1,m._baseOpacity*3.0); break;
+        case 3: if(m._savedHex==null)m._savedHex=m.color.getHex(); m.color.set(0xffd700); m.opacity=Math.min(1,m._baseOpacity*2.5); break;
+        case -1: if(m._savedHex==null)m._savedHex=m.color.getHex(); m.color.set(0x000011); m.opacity=m._baseOpacity*.08; break;
+      }
+    });
+  }
+
+  function drawRipple(ox,oy,progress,maxR){
+    glCtx.clearRect(0,0,glWaveCv.width,glWaveCv.height);
+    const r=Math.max(0,maxR*progress), alpha=1-progress, W=glWaveCv.width, H=glWaveCv.height;
+    if(progress>.04&&progress<.88){glCtx.save();glCtx.globalAlpha=Math.sin(progress*Math.PI)*.045;glCtx.fillStyle='#000033';glCtx.beginPath();glCtx.arc(ox,oy,r,0,Math.PI*2);glCtx.fill();glCtx.restore();}
+    glCtx.save();glCtx.lineWidth=Math.max(1,8*alpha+2);glCtx.strokeStyle=`rgba(0,240,255,${(alpha*.78).toFixed(2)})`;glCtx.shadowColor='#00f0ff';glCtx.shadowBlur=36*alpha;glCtx.beginPath();glCtx.arc(ox,oy,r,0,Math.PI*2);glCtx.stroke();glCtx.restore();
+    if(r>10){glCtx.save();glCtx.lineWidth=Math.max(.5,4*alpha);glCtx.strokeStyle=`rgba(255,0,204,${(alpha*.38).toFixed(2)})`;glCtx.beginPath();glCtx.arc(ox+5,oy+3,r,0,Math.PI*2);glCtx.stroke();glCtx.restore();}
+    if(r>30){glCtx.save();glCtx.lineWidth=Math.max(.5,3*alpha);glCtx.strokeStyle=`rgba(186,255,0,${(alpha*.28).toFixed(2)})`;glCtx.beginPath();glCtx.arc(ox,oy,r*.88,0,Math.PI*2);glCtx.stroke();glCtx.restore();}
+    if(r>80){glCtx.save();glCtx.lineWidth=Math.max(.5,2*alpha);glCtx.strokeStyle=`rgba(255,0,204,${(alpha*.16).toFixed(2)})`;glCtx.beginPath();glCtx.arc(ox,oy,r*.75,0,Math.PI*2);glCtx.stroke();glCtx.restore();}
+    const waveBand=r, bandwidth=Math.max(20,80*(1-progress));
+    for(let i=0;i<5;i++){
+      const lineY=Math.random()*H, lineDist=Math.abs(lineY-oy)-waveBand;
+      if(Math.abs(lineDist)>bandwidth) continue;
+      const proximity=1-Math.abs(lineDist)/bandwidth, lineAlpha=proximity*alpha*.45;
+      const lineH=1+Math.random()*3, shift=(Math.random()-.5)*22*proximity, lineW=(.3+Math.random()*.6)*W, lineX=Math.random()*(W-lineW)+shift;
+      glCtx.save();glCtx.globalAlpha=lineAlpha;glCtx.fillStyle=Math.random()<.6?'#00f0ff':'#ff00cc';glCtx.fillRect(lineX,lineY,lineW,lineH);glCtx.restore();
+    }
+    if(progress>.08&&progress<.82&&Math.random()<.55){
+      const nBlocks=4+Math.floor(Math.random()*8);glCtx.save();
+      for(let i=0;i<nBlocks;i++){
+        const bx=Math.random()*W, by=Math.random()*H, dist=Math.hypot(bx-ox,by-oy);
+        if(dist>r) continue;
+        const bw=2+Math.random()*18, bh=1+Math.random()*4, ba=(.04+Math.random()*.08)*alpha;
+        glCtx.fillStyle=Math.random()<.5?`rgba(0,240,255,${ba})`:`rgba(255,0,204,${ba})`;
+        glCtx.fillRect(bx,by,bw,bh);
+      }
+      glCtx.restore();
+    }
+    if(Math.random()<.28){
+      const nBars=1+Math.floor(Math.random()*4);glCtx.save();
+      for(let i=0;i<nBars;i++){const by=Math.random()*H, ba=(.025+Math.random()*.04)*alpha;glCtx.fillStyle=`rgba(0,240,255,${ba.toFixed(3)})`;glCtx.fillRect(0,by,W,1+Math.floor(Math.random()*3));}
+      glCtx.restore();
+    }
+    if(progress>.88){
+      const cp=(progress-.88)/.12, ir=r*(1-cp*.35), ia=(1-cp)*.55;
+      if(ir>0){glCtx.save();glCtx.lineWidth=2+cp*3;glCtx.strokeStyle=`rgba(255,0,204,${ia.toFixed(2)})`;glCtx.shadowColor='#ff00cc';glCtx.shadowBlur=20;glCtx.beginPath();glCtx.arc(ox,oy,ir,0,Math.PI*2);glCtx.stroke();glCtx.restore();}
     }
   }
 
-  requestAnimationFrame(animateBeam);
-}
-
-/* UI UPDATE */
-function updateUI(text){
-  left.innerHTML = "";
-  right.innerHTML = "";
-  left.className = "side";
-  right.className = "side";
-
-  if(text === "DRAW"){
-    left.innerHTML = `<span class="draw">DRAW</span>`;
-    right.innerHTML = `<span class="draw">DRAW</span>`;
-    return;
+  function startEnvGlitch(){
+    if(envGlitching) return;
+    envGlitching=true; glitchMidFired=false;
+    const ox=.12*window.innerWidth+Math.random()*.76*window.innerWidth;
+    const oy=.12*window.innerHeight+Math.random()*.76*window.innerHeight;
+    const maxR=Math.sqrt(Math.pow(Math.max(ox,window.innerWidth-ox),2)+Math.pow(Math.max(oy,window.innerHeight-oy),2))*1.12;
+    const duration=2400+Math.random()*2000;
+    envMaterialState(-1); renderer.domElement.style.filter='brightness(0.08) saturate(0)';
+    // --- POLISH: subtle static crackle at glitch onset ---
+    playGlitchStaticSound();
+    setTimeout(()=>{envMaterialState(1);renderer.domElement.style.filter='brightness(2.2) saturate(3) hue-rotate(35deg) contrast(1.4)';},80);
+    setTimeout(()=>{envMaterialState(2);renderer.domElement.style.filter='hue-rotate(-60deg) contrast(1.5) saturate(2.5) brightness(1.1)';},180);
+    setTimeout(()=>{envMaterialState(1);renderer.domElement.style.filter='brightness(1.8) saturate(2)';},280);
+    setTimeout(()=>{envMaterialState(0);renderer.domElement.style.filter='';},360);
+    const titleEl=document.getElementById('title');
+    if(titleEl){titleEl.style.filter='hue-rotate(180deg) saturate(3)';setTimeout(()=>{titleEl.style.filter='';},160);}
+    const rippleStart=performance.now();
+    function animRipple(now){
+      const progress=Math.min(1,(now-rippleStart)/duration);
+      drawRipple(ox,oy,progress,maxR);
+      if(progress>.37&&progress<.40&&!glitchMidFired){
+        glitchMidFired=true;
+        envMaterialState(3);renderer.domElement.style.filter='hue-rotate(55deg) brightness(1.6) saturate(2.2)';
+        setTimeout(()=>{envMaterialState(2);setTimeout(()=>{envMaterialState(0);renderer.domElement.style.filter='';},90);},80);
+      }
+      if(progress<1){glitchWaveId=requestAnimationFrame(animRipple);}
+      else{
+        glCtx.clearRect(0,0,glWaveCv.width,glWaveCv.height);
+        envMaterialState(-1);renderer.domElement.style.filter='brightness(0.05) saturate(0)';
+        setTimeout(()=>{envMaterialState(1);renderer.domElement.style.filter='brightness(1.9) saturate(2.5)';setTimeout(()=>{envMaterialState(0);renderer.domElement.style.filter='';envGlitching=false;schedEnvGlitch();},100);},70);
+      }
+    }
+    glitchWaveId=requestAnimationFrame(animRipple);
   }
+  function schedEnvGlitch(){setTimeout(startEnvGlitch,10000+Math.random()*50000);}
+  schedEnvGlitch();
 
-  const cleanText = text.replace("X","").replace("O","").trim();
-  const symbol = current === "X" ? "X" : "O";
+  window.addEventListener('resize',()=>{
+    const nW=window.innerWidth,nH=window.innerHeight;
+    camera.aspect=nW/nH; camera.updateProjectionMatrix(); renderer.setSize(nW,nH);
+  });
 
-  const isLeft = (!swap && text.includes("X")) || (swap && text.includes("O"));
-  const target = isLeft ? left : right;
-
-  target.innerHTML = `
-    <span class="symbol">${symbol}</span>
-    <span class="label">${cleanText}</span>
-  `;
-
-  target.classList.add("metal");
-}
-
-/* CLICK */
-board.onclick = e => {
-  const cell = e.target.closest(".cell");
-  if(!cell || gameOver) return;
-
-  const i = cell.dataset.i;
-  if(boardState[i]) return;
-
-  boardState[i] = current;
-
-  const m = document.createElement("div");
-  m.className = "mark " + current.toLowerCase();
-  m.textContent = current;
-  cell.appendChild(m);
-
-  playPlaceSound(current === "X");
-
-  const win = checkWin();
-
-  if(win){
-    gameOver = true;
-    playSparkle();
-    drawWinLine(win, current);
-    updateUI(current + " WINS");
-    return;
+  let lastT=0;
+  function envRender(now){
+    requestAnimationFrame(envRender);
+    const dt=Math.min((now-lastT)/1000,.05); lastT=now;
+    envAutoYaw+=.00018;
+    if(!isDraggingEnv){dragVelX*=.88;dragVelY*=.88;dragYaw-=dragVelX*.0015;dragPitch+=dragVelY*.0015;}
+    envGroup.rotation.y=envAutoYaw+dragYaw;
+    envGroup.rotation.x=dragPitch;
+    updateParticles(dt);
+    renderer.render(scene,camera);
   }
-
-  if(boardState.every(x => x)){
-    gameOver = true;
-    updateUI("DRAW");
-    return;
-  }
-
-  current = current === "X" ? "O" : "X";
-  updateUI(current + " TURN");
-};
-
-/* WIN CHECK */
-const wins = [
-  [0,1,2],[3,4,5],[6,7,8],
-  [0,3,6],[1,4,7],[2,5,8],
-  [0,4,8],[2,4,6]
-];
-
-function checkWin(){
-  return wins.find(([a,b,c]) =>
-    boardState[a] &&
-    boardState[a]===boardState[b] &&
-    boardState[a]===boardState[c]
-  );
-}
-
-/* RESET */
-restartBtn.onclick = () => {
-  boardState = Array(9).fill(null);
-  current = "X";
-  gameOver = false;
-  swap = !swap;
-
-  document.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  updateUI("X TURN");
-  playResetSound();
-};
-
-updateUI("X TURN");
+  requestAnimationFrame(envRender);
+})();
 </script>
-
 </body>
 </html>
