@@ -2250,28 +2250,11 @@ updateUI();
       cssRoom3D.style.transform = `rotateY(${yaw}rad) rotateX(${pitch}rad)`;
     }
 
-    // --- PANEL ANCHORING: no per-frame JS position updates ---
-    // Panels are fixed world-space objects. Their transforms are pure CSS.
-    // #room3D rotation (above) is the ONLY thing that moves them — like
-    // real objects attached to a rotating cylindrical room wall.
-    // The cosFactor opacity/filter/scale writes have been neutralised here
-    // so inline styles no longer override the CSS. .front class is still
-    // toggled in case future content needs it, but has no visual effect now.
-    const RAD = Math.PI / 180;
-    const yawDeg = (envAutoYaw + dragYaw) * (180 / Math.PI);
-    document.querySelectorAll('.adScreen').forEach(p => {
-      const panelAngle = parseFloat(p.dataset.angle) || 0;
-      let diff = ((panelAngle - yawDeg) % 360 + 540) % 360 - 180;
-      const cosFactor = (Math.cos(diff * RAD) + 1) / 2;
-      // Inline style writes removed — CSS owns opacity/filter/scale completely.
-      // p.style.opacity and p.style.filter intentionally cleared so CSS wins.
-      p.style.opacity = '';
-      p.style.filter  = '';
-      p.style.scale   = '';
-      if(cosFactor > 0.72) p.classList.add('front');
-      else                  p.classList.remove('front');
-    });
-    // --- END PANEL ANCHORING ---
+    // Panels are pure CSS static world-space objects.
+    // Their transforms (rotateY + translateZ + translateY) are set once in CSS.
+    // #room3D rotation (above) is the ONLY thing that moves them in view —
+    // exactly like objects bolted to a rotating cylindrical wall.
+    // No per-frame JS reads or writes on .adScreen elements at all.
 
     updateParticles(dt);
     renderer.render(scene,camera);
