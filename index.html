@@ -682,18 +682,15 @@ body.env-grabbing { cursor: grabbing; }
 .adScreen.front {}
 
 /* --- FIXED WORLD-SPACE PANEL POSITIONS ---
-   Panels are children of #room3D. When #room3D rotates, they orbit
-   around the viewer exactly like wall objects in a circular room.
-   They are NEVER repositioned by JS — pure CSS static transforms.
-   Z=1500px = outer wall radius.
-   translateY = dramatic vertical spread so panels sit at distinct heights. */
-#ad1 { transform: rotateY(  0deg) translateZ(1500px) translateY(-300px); }
-#ad2 { transform: rotateY( 51deg) translateZ(1500px) translateY(-150px); }
-#ad3 { transform: rotateY(103deg) translateZ(1500px) translateY(   0px); }
-#ad4 { transform: rotateY(154deg) translateZ(1500px) translateY( 150px); }
-#ad5 { transform: rotateY(206deg) translateZ(1500px) translateY( 300px); }
-#ad6 { transform: rotateY(257deg) translateZ(1500px) translateY(-450px); }
-#ad7 { transform: rotateY(309deg) translateZ(1500px) translateY( 450px); }
+   rotateX(0deg) on each panel neutralises any inherited vertical tilt.
+   Must be placed FIRST in each transform so it applies in panel's own local space. */
+#ad1 { transform: rotateX(0deg) rotateY(  0deg) translateZ(1500px) translateY(-300px); }
+#ad2 { transform: rotateX(0deg) rotateY( 51deg) translateZ(1500px) translateY(-150px); }
+#ad3 { transform: rotateX(0deg) rotateY(103deg) translateZ(1500px) translateY(   0px); }
+#ad4 { transform: rotateX(0deg) rotateY(154deg) translateZ(1500px) translateY( 150px); }
+#ad5 { transform: rotateX(0deg) rotateY(206deg) translateZ(1500px) translateY( 300px); }
+#ad6 { transform: rotateX(0deg) rotateY(257deg) translateZ(1500px) translateY(-450px); }
+#ad7 { transform: rotateX(0deg) rotateY(309deg) translateZ(1500px) translateY( 450px); }
 
 /* gameUI — completely outside #camera, fully flat, untouched by 3D */
 #gameUI {
@@ -713,6 +710,22 @@ body.env-grabbing { cursor: grabbing; }
   50%       { opacity: 0.88; }
 }
 
+/* --- FIX 3: MOBILE CSS --- */
+@media (max-width: 768px) {
+  #game { transform: scale(0.72); transform-origin: top center; gap: 18px; }
+  #title { margin-bottom: 10px; }
+  #clashText { font-size: 52px; }
+  #xoSvg { width: 130px !important; height: 130px !important; }
+  #restart { padding: 12px 44px; font-size: 18px; }
+  .side { width: 100px; }
+  .side .sym { font-size: 56px; }
+  body { -webkit-text-size-adjust: 100%; }
+}
+@media (max-width: 480px) {
+  #game { transform: scale(0.56); transform-origin: top center; }
+}
+/* --- END FIX 3: MOBILE CSS --- */
+
 </style>
 </head>
 <body>
@@ -721,13 +734,13 @@ body.env-grabbing { cursor: grabbing; }
   <!-- 3D WORLD — panels ring around viewer, independent of game UI -->
   <div id="room3D">
     <div id="adLayer">
-      <div class="adScreen" id="ad1" data-angle="0"></div>
-      <div class="adScreen" id="ad2" data-angle="51"></div>
-      <div class="adScreen" id="ad3" data-angle="103"></div>
-      <div class="adScreen" id="ad4" data-angle="154"></div>
-      <div class="adScreen" id="ad5" data-angle="206"></div>
-      <div class="adScreen" id="ad6" data-angle="257"></div>
-      <div class="adScreen" id="ad7" data-angle="309"></div>
+      <div class="adScreen" id="ad1" data-angle="0"   data-base-transform="rotateY(0deg)   translateZ(1500px) translateY(-300px)"></div>
+      <div class="adScreen" id="ad2" data-angle="51"  data-base-transform="rotateY(51deg)  translateZ(1500px) translateY(-150px)"></div>
+      <div class="adScreen" id="ad3" data-angle="103" data-base-transform="rotateY(103deg) translateZ(1500px) translateY(0px)"></div>
+      <div class="adScreen" id="ad4" data-angle="154" data-base-transform="rotateY(154deg) translateZ(1500px) translateY(150px)"></div>
+      <div class="adScreen" id="ad5" data-angle="206" data-base-transform="rotateY(206deg) translateZ(1500px) translateY(300px)"></div>
+      <div class="adScreen" id="ad6" data-angle="257" data-base-transform="rotateY(257deg) translateZ(1500px) translateY(-450px)"></div>
+      <div class="adScreen" id="ad7" data-angle="309" data-base-transform="rotateY(309deg) translateZ(1500px) translateY(450px)"></div>
     </div>
   </div>
 </div><!-- end #camera -->
@@ -1503,7 +1516,8 @@ boardEl.addEventListener('click', e => {
 
     // Symbol toggle happens NOW — after snapshot is safely stored
     roundStartPlayer=roundStartPlayer==='X'?'O':'X';
-    if(gameMode==='ai')     humanSymbol=roundStartPlayer;
+    // humanSymbol is set by restart handler via starterIndex — NOT here.
+    // Setting it here would override the starterIndex-based alternation.
     if(gameMode==='online') mySymbol=mySymbol==='X'?'O':'X';
     // isRoundActive is still TRUE here → this single updateUI() call renders correctly
     updateUI(); updateScoreBar();
@@ -1525,7 +1539,7 @@ boardEl.addEventListener('click', e => {
     finalWinnerSym=null; finalWinnerPlayer=null; finalP1IsX=null;
     // --- WINNER SNAPSHOT FIX END ---
     roundStartPlayer=roundStartPlayer==='X'?'O':'X';
-    if(gameMode==='ai')     humanSymbol=roundStartPlayer;
+    // humanSymbol owned by restart handler — not set here.
     if(gameMode==='online') mySymbol=mySymbol==='X'?'O':'X';
     highlightDrawCells();
     // isRoundActive still TRUE here → this updateUI() renders DRAW correctly
@@ -1569,8 +1583,21 @@ restBtn.addEventListener('click',()=>{
   roundStartPlayer = (starterIndex % 2 === 0) ? 'X' : 'O';
   clearCellHighlights();
   boardState=Array(9).fill(null); gameOver=false; isDraw=false;
-  current=roundStartPlayer; swap=current==='O';
-  if(gameMode==='ai') humanSymbol=roundStartPlayer;
+  current=roundStartPlayer;
+  if(gameMode==='ai') {
+    // FIX 2: separate WHO STARTS from WHAT SYMBOL the human plays.
+    // starterIndex odd  → AI starts:    human = opposite of roundStartPlayer
+    // starterIndex even → human starts: human = roundStartPlayer
+    // The old line `humanSymbol=roundStartPlayer` always made human=current=starter,
+    // so the human ALWAYS went first regardless of starterIndex.
+    if(starterIndex % 2 !== 0) {
+      humanSymbol = (roundStartPlayer === 'X') ? 'O' : 'X'; // AI starts
+    } else {
+      humanSymbol = roundStartPlayer;                         // human starts
+    }
+  }
+  // FIX 2: swap based on humanSymbol so human's panel stays on same side every round
+  swap = (gameMode === 'ai') ? (humanSymbol === 'O') : current === 'O';
   if(gameMode==='online'&&conn){try{conn.send({type:'restart'});}catch(e){}}
   document.querySelectorAll('.cell').forEach(c=>c.innerHTML='');
   if(beamId){cancelAnimationFrame(beamId);beamId=null;}
@@ -1581,6 +1608,10 @@ restBtn.addEventListener('click',()=>{
   // FIX 2: round counter advances HERE (on restart click), not on win/draw
   updateRoundDisplay();
   playResetSound(); updateUI();
+  // FIX 2 — trigger AI immediately if it is the starting player this round
+  if(gameMode==='ai' && current !== humanSymbol) {
+    doAIMove();
+  }
 });
 
 // ============================================================
@@ -1691,7 +1722,14 @@ function fullReset(){
   clearCellHighlights();
   boardState=Array(9).fill(null); gameOver=false; isDraw=false;
   current=roundStartPlayer; swap=current==='O';
-  if(gameMode==='ai') humanSymbol=roundStartPlayer;
+  if(gameMode==='ai') {
+    // Same parity logic as restart handler — starterIndex not reset between matches
+    if(starterIndex % 2 !== 0) {
+      humanSymbol = (roundStartPlayer === 'X') ? 'O' : 'X'; // AI starts
+    } else {
+      humanSymbol = roundStartPlayer;                         // human starts
+    }
+  }
   document.querySelectorAll('.cell').forEach(c=>c.innerHTML='');
   if(beamId){cancelAnimationFrame(beamId);beamId=null;}
   winCtx.clearRect(0,0,CV_SZ,CV_SZ);
@@ -2147,6 +2185,31 @@ updateUI();
   });
   document.addEventListener('mouseup',()=>{isDraggingEnv=false;document.body.classList.remove('env-grabbing');});
 
+  // --- FIX 3: TOUCH CONTROLS — swipe to look around on mobile ---
+  // Completely additive — uses same dragYaw/dragPitch variables as mouse drag.
+  // Does NOT interfere with game board tap detection (game board has pointer-events:all).
+  let touchStartX = 0, touchStartY = 0, isTouchingEnv = false;
+  const GAME_TOUCH_ELS = '#board,#restart,.side,#title,button,.cell,.mark,svg,canvas,#modeScreen,#lobbyScreen,#matchOverScreen,#backBtn,#gameUI';
+  document.addEventListener('touchstart', e => {
+    if(e.target.closest(GAME_TOUCH_ELS)) return; // let game handle its own touches
+    isTouchingEnv = true;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if(!isTouchingEnv) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+    dragYaw  -= dx * 0.005;   // same sensitivity as mouse
+    dragPitch += dy * 0.005;
+    // Clamp vertical so panels never invert completely
+    dragPitch = Math.max(-0.785, Math.min(0.785, dragPitch)); // ±45° in radians
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', () => { isTouchingEnv = false; });
+  // --- END FIX 3: TOUCH CONTROLS ---
+
   // Glitch wave canvas
   const glWaveCv=document.createElement('canvas');
   glWaveCv.id='glitchWaveCanvas';
@@ -2265,27 +2328,30 @@ updateUI();
     envGroup.rotation.y=envAutoYaw+dragYaw;
     envGroup.rotation.x=dragPitch;
 
-    // #room3D rotation: panels are children of this element, so they orbit
-    // with the room exactly like physical wall screens.
-    // CRITICAL: only rotateY (horizontal) applied to room3D — keeps panels
-    // pinned to the cylindrical wall regardless of up/down camera movement.
-    // rotateX (vertical pitch) goes ONLY to #camera so the WebGL cage tilts
-    // but the CSS panels do NOT move vertically with the camera.
-    const cssCamera = document.getElementById('camera');
+    // #room3D rotation: ONLY rotateY (horizontal yaw).
+    // Pitch is handled exclusively by Three.js envGroup.rotation.x above.
+    // Applying rotateX to #camera or #room3D would tilt the panel container
+    // and make panels drift vertically — so we never rotate the CSS camera on X.
     if(cssRoom3D){
       const yaw = (envAutoYaw + dragYaw).toFixed(5);
       cssRoom3D.style.transform = `rotateY(${yaw}rad)`;
     }
-    if(cssCamera){
-      const pitch = dragPitch.toFixed(5);
-      cssCamera.style.transform = `rotateX(${pitch}rad)`;
-    }
+    // NOTE: no cssCamera.style.transform — perspective container stays neutral.
 
-    // Panels are pure CSS static world-space objects.
-    // Their transforms (rotateY + translateZ + translateY) are set once in CSS.
-    // #room3D rotation (above) is the ONLY thing that moves them in view —
-    // exactly like objects bolted to a rotating cylindrical wall.
-    // No per-frame JS reads or writes on .adScreen elements at all.
+    // --- FIX 1: COUNTER-PITCH — cancel inherited vertical tilt on each panel ---
+    // dragPitch drives envGroup.rotation.x (Three.js WebGL cage tilts vertically).
+    // The CSS panels live in the same visual space so they appear to shift vertically
+    // with the cage. Fix: apply -dragPitch to each panel's transform after its
+    // baseTransform so the vertical component is exactly neutralised.
+    // data-base-transform is read ONCE from HTML — never recalculated per frame.
+    {
+      const pitchDeg = (-dragPitch * 180 / Math.PI).toFixed(4);
+      document.querySelectorAll('.adScreen').forEach(p => {
+        const base = p.dataset.baseTransform || '';
+        p.style.transform = base + ` rotateX(${pitchDeg}deg)`;
+      });
+    }
+    // --- END FIX 1 ---
 
     updateParticles(dt);
     renderer.render(scene,camera);
