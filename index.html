@@ -1055,6 +1055,12 @@ let roundInProgress = false;
 let roundStartPlayer = 'X';
 let humanSymbol      = 'X';
 
+// FIX 3 — STARTER ROTATION
+// starterIndex NEVER resets — persists across all matches for strict fairness.
+// Odd index → 'O' starts; even index → 'X' starts.
+// Incremented ONLY in the restart handler (each new round).
+let starterIndex = 0;
+
 // Online state
 let peer     = null;
 let conn     = null;
@@ -1500,7 +1506,9 @@ boardEl.addEventListener('click', e => {
     if(gameMode==='ai')     humanSymbol=roundStartPlayer;
     if(gameMode==='online') mySymbol=mySymbol==='X'?'O':'X';
     // isRoundActive is still TRUE here → this single updateUI() call renders correctly
-    updateUI(); updateRoundDisplay(); updateScoreBar();
+    updateUI(); updateScoreBar();
+    // NOTE: updateRoundDisplay() intentionally NOT called here — round counter
+    // advances only when restart is clicked, not immediately after win.
     // --- UI LOCK FIX START ---
     // Lock UI NOW — any subsequent updateUI() call is blocked until restart
     isRoundActive = false;
@@ -1521,7 +1529,8 @@ boardEl.addEventListener('click', e => {
     if(gameMode==='online') mySymbol=mySymbol==='X'?'O':'X';
     highlightDrawCells();
     // isRoundActive still TRUE here → this updateUI() renders DRAW correctly
-    updateUI(); updateRoundDisplay(); updateScoreBar();
+    updateUI(); updateScoreBar();
+    // NOTE: updateRoundDisplay() intentionally NOT called here — see win path above.
     // --- UI LOCK FIX START ---
     isRoundActive = false;
     // --- UI LOCK FIX END ---
@@ -1554,6 +1563,10 @@ restBtn.addEventListener('click',()=>{
   // --- UI LOCK FIX START: re-enable UI updates for the new round ---
   isRoundActive = true;
   // --- UI LOCK FIX END ---
+  // FIX 3: advance starterIndex → derives roundStartPlayer for this new round
+  // starterIndex never resets — ensures strict alternation across ALL matches
+  starterIndex++;
+  roundStartPlayer = (starterIndex % 2 === 0) ? 'X' : 'O';
   clearCellHighlights();
   boardState=Array(9).fill(null); gameOver=false; isDraw=false;
   current=roundStartPlayer; swap=current==='O';
@@ -1565,6 +1578,8 @@ restBtn.addEventListener('click',()=>{
   if(chaosId){cancelAnimationFrame(chaosId);chaosId=null;}
   chaosLive=false; chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
   gameEl.style.transform='';
+  // FIX 2: round counter advances HERE (on restart click), not on win/draw
+  updateRoundDisplay();
   playResetSound(); updateUI();
 });
 
@@ -1726,7 +1741,16 @@ function setupPeer(asHost){
     return;
   }
   disconnectOnline(); mySymbol=asHost?'X':'O';
-  peer=new Peer(undefined,{debug:0});
+
+  // FIX 4 — short friendly room code: 4 digits - 4 digits (e.g. 4821-7392)
+  function generateRoomCode(){
+    const part=()=>Math.floor(1000+Math.random()*9000);
+    return `${part()}-${part()}`;
+  }
+
+  // Host uses the generated code as the PeerJS peer ID so guest can connect with it
+  const peerId = asHost ? generateRoomCode() : undefined;
+  peer=new Peer(peerId,{debug:0});
   peer.on('error',err=>{const st=document.getElementById('lobbyStatus');if(st) st.textContent='Error: '+err.type;});
   if(asHost){
     document.getElementById('lobbyChoice').style.display='none';
@@ -2243,11 +2267,18 @@ updateUI();
 
     // #room3D rotation: panels are children of this element, so they orbit
     // with the room exactly like physical wall screens.
-    // rotateY (horizontal look) + rotateX (vertical look) matches Three.js YXZ order.
+    // CRITICAL: only rotateY (horizontal) applied to room3D — keeps panels
+    // pinned to the cylindrical wall regardless of up/down camera movement.
+    // rotateX (vertical pitch) goes ONLY to #camera so the WebGL cage tilts
+    // but the CSS panels do NOT move vertically with the camera.
+    const cssCamera = document.getElementById('camera');
     if(cssRoom3D){
-      const yaw   = (envAutoYaw + dragYaw).toFixed(5);
-      const pitch  = dragPitch.toFixed(5);
-      cssRoom3D.style.transform = `rotateY(${yaw}rad) rotateX(${pitch}rad)`;
+      const yaw = (envAutoYaw + dragYaw).toFixed(5);
+      cssRoom3D.style.transform = `rotateY(${yaw}rad)`;
+    }
+    if(cssCamera){
+      const pitch = dragPitch.toFixed(5);
+      cssCamera.style.transform = `rotateX(${pitch}rad)`;
     }
 
     // Panels are pure CSS static world-space objects.
