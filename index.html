@@ -2241,9 +2241,9 @@ updateUI();
     envGroup.rotation.y=envAutoYaw+dragYaw;
     envGroup.rotation.x=dragPitch;
 
-    // Mirror SAME rotation to CSS #room3D so ad panels move with the environment.
-    // rotateY then rotateX matches Three.js Euler order YXZ.
-    // Using radians directly — no conversion needed.
+    // #room3D rotation: panels are children of this element, so they orbit
+    // with the room exactly like physical wall screens.
+    // rotateY (horizontal look) + rotateX (vertical look) matches Three.js YXZ order.
     if(cssRoom3D){
       const yaw   = (envAutoYaw + dragYaw).toFixed(5);
       const pitch  = dragPitch.toFixed(5);
