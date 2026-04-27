@@ -659,31 +659,30 @@ body.env-grabbing { cursor: grabbing; }
   transform-style: preserve-3d;
 }
 
-/* Base panel style — centered on anchor via negative margin */
+/* Base panel style */
 .adScreen {
   position: absolute;
   width: 300px;
   height: 180px;
-  margin-left: -150px;   /* half width  → centres panel on anchor */
-  margin-top:  -90px;    /* half height → centres panel on anchor */
+  margin-left: -150px;
+  margin-top:  -90px;
   border-radius: 12px;
-  background: rgba(255, 0, 0, 0.25);
-  border: 2px solid red;
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
-  /* always visible — no per-frame opacity tricks */
-  pointer-events: none;  /* NEVER intercept game clicks */
-  z-index: 0;            /* always behind gameUI (z-index:10) */
+  pointer-events: none;
+  z-index: 0;
   opacity: 1;
   filter: none;
   scale: 1;
+  will-change: transform;   /* own compositor layer — prevents parent-tilt bleed */
+  /* Default visible style (overridden by --active / --dim) */
+  background: rgba(10,10,22,0.6);
+  border: 1.5px solid rgba(0,240,255,0.3);
 }
 
-/* .front kept for future use; no visual effect right now */
+/* .front kept for future use */
 .adScreen.front {}
 
-/* --- FIXED WORLD-SPACE PANEL POSITIONS ---
-   rotateX(0deg) on each panel neutralises any inherited vertical tilt.
-   Must be placed FIRST in each transform so it applies in panel's own local space. */
+/* CSS fallback transforms — MUST match data-base-transform exactly.
+   Inline style set by __PANELS_LOCKED__ takes precedence (same values). */
 #ad1 { transform: rotateX(0deg) rotateY(  0deg) translateZ(1500px) translateY(-300px); }
 #ad2 { transform: rotateX(0deg) rotateY( 51deg) translateZ(1500px) translateY(-150px); }
 #ad3 { transform: rotateX(0deg) rotateY(103deg) translateZ(1500px) translateY(   0px); }
@@ -710,6 +709,36 @@ body.env-grabbing { cursor: grabbing; }
   50%       { opacity: 0.88; }
 }
 
+/* --- FIX 6: PANEL CONTENT CSS --- */
+.adScreen--active {
+  background: rgba(10, 10, 22, 0.82);
+  border: 1.5px solid rgba(0,240,255,0.5);
+  box-shadow: 0 0 18px rgba(0,240,255,0.25), inset 0 0 12px rgba(0,240,255,0.06);
+  display: flex; align-items: center; justify-content: center;
+}
+.adScreen--dim {
+  background: rgba(4,0,18,0.30);
+  border: 1px solid rgba(0,240,255,0.10);
+  box-shadow: none;
+  opacity: 0.25;
+}
+.adCard {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px 20px; width: 100%;
+}
+.adLabel {
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: 13px; font-weight: 900; letter-spacing: 4px;
+  color: rgba(0,240,255,0.55); text-transform: uppercase;
+}
+.adSub {
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: 28px; font-weight: 900; letter-spacing: 3px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0,240,255,0.6), 0 0 22px rgba(0,240,255,0.3);
+}
+/* --- END FIX 6 --- */
+
 /* --- FIX 3: MOBILE CSS --- */
 @media (max-width: 768px) {
   #game { transform: scale(0.72); transform-origin: top center; gap: 18px; }
@@ -734,13 +763,23 @@ body.env-grabbing { cursor: grabbing; }
   <!-- 3D WORLD — panels ring around viewer, independent of game UI -->
   <div id="room3D">
     <div id="adLayer">
-      <div class="adScreen" id="ad1" data-angle="0"   data-base-transform="rotateY(0deg)   translateZ(1500px) translateY(-300px)"></div>
-      <div class="adScreen" id="ad2" data-angle="51"  data-base-transform="rotateY(51deg)  translateZ(1500px) translateY(-150px)"></div>
-      <div class="adScreen" id="ad3" data-angle="103" data-base-transform="rotateY(103deg) translateZ(1500px) translateY(0px)"></div>
-      <div class="adScreen" id="ad4" data-angle="154" data-base-transform="rotateY(154deg) translateZ(1500px) translateY(150px)"></div>
-      <div class="adScreen" id="ad5" data-angle="206" data-base-transform="rotateY(206deg) translateZ(1500px) translateY(300px)"></div>
-      <div class="adScreen" id="ad6" data-angle="257" data-base-transform="rotateY(257deg) translateZ(1500px) translateY(-450px)"></div>
-      <div class="adScreen" id="ad7" data-angle="309" data-base-transform="rotateY(309deg) translateZ(1500px) translateY(450px)"></div>
+      <!-- Active panels (4) — neon content cards -->
+      <div class="adScreen adScreen--active" id="ad1" data-angle="0"   data-base-transform="rotateX(0deg) rotateY(0deg)   translateZ(1500px) translateY(-300px)">
+        <div class="adCard"><span class="adLabel">PLAYER 1</span><span class="adSub">X / O</span></div>
+      </div>
+      <div class="adScreen adScreen--active" id="ad2" data-angle="51"  data-base-transform="rotateX(0deg) rotateY(51deg)  translateZ(1500px) translateY(-150px)">
+        <div class="adCard"><span class="adLabel">ROUND</span><span class="adSub" id="adRound">1 / 5</span></div>
+      </div>
+      <div class="adScreen adScreen--active" id="ad3" data-angle="103" data-base-transform="rotateX(0deg) rotateY(103deg) translateZ(1500px) translateY(0px)">
+        <div class="adCard"><span class="adLabel">SCORE</span><span class="adSub" id="adScore">0 — 0</span></div>
+      </div>
+      <div class="adScreen adScreen--active" id="ad4" data-angle="154" data-base-transform="rotateX(0deg) rotateY(154deg) translateZ(1500px) translateY(150px)">
+        <div class="adCard"><span class="adLabel">PLAYER 2</span><span class="adSub">X / O</span></div>
+      </div>
+      <!-- Dimmed ambient panels (3) -->
+      <div class="adScreen adScreen--dim" id="ad5" data-angle="206" data-base-transform="rotateX(0deg) rotateY(206deg) translateZ(1500px) translateY(300px)"></div>
+      <div class="adScreen adScreen--dim" id="ad6" data-angle="257" data-base-transform="rotateX(0deg) rotateY(257deg) translateZ(1500px) translateY(-450px)"></div>
+      <div class="adScreen adScreen--dim" id="ad7" data-angle="309" data-base-transform="rotateX(0deg) rotateY(309deg) translateZ(1500px) translateY(450px)"></div>
     </div>
   </div>
 </div><!-- end #camera -->
@@ -1073,6 +1112,9 @@ let humanSymbol      = 'X';
 // Odd index → 'O' starts; even index → 'X' starts.
 // Incremented ONLY in the restart handler (each new round).
 let starterIndex = 0;
+
+// Fix 5: explicit startingPlayer role — purely controls turn, never UI position
+let startingPlayer = 'human'; // 'human' | 'ai'
 
 // Online state
 let peer     = null;
@@ -1454,8 +1496,14 @@ function updateRoundDisplay() {
   // --- UI LOCK FIX START: block stray calls after round ends ---
   if(!isRoundActive && gameOver) return;
   // --- UI LOCK FIX END ---
-  const rt=document.getElementById('roundText');
-  if(rt) rt.textContent='ROUND '+Math.min(completedRounds+1,TOTAL_ROUNDS)+' / '+TOTAL_ROUNDS;
+  // Single source of truth for both round displays
+  const n   = Math.min(completedRounds + 1, TOTAL_ROUNDS);
+  const rt  = document.getElementById('roundText');
+  const sbr = document.getElementById('sbRound');
+  if(rt)  rt.textContent  = `ROUND ${n} / ${TOTAL_ROUNDS}`;
+  if(sbr) sbr.textContent = `RD ${n}/${TOTAL_ROUNDS}`;
+  const adR = document.getElementById('adRound');
+  if(adR) adR.textContent = `${n} / ${TOTAL_ROUNDS}`;
 }
 
 // ============================================================
@@ -1493,22 +1541,36 @@ boardEl.addEventListener('click', e => {
   if(win){
     gameOver=true; completedRounds++; roundInProgress=false;
 
-    // --- POLISH + SCORE FIX START: score by player identity, not by symbol ---
-    const p1SymbolThisRound = roundStartPlayer;
-    if(current === p1SymbolThisRound) playerScores.p1++;
-    else                               playerScores.p2++;
-    scores[current]++;
-    // --- POLISH + SCORE FIX END ---
+    // Fix 3: SYMBOL-BASED scoring — scores.X / scores.O are the only counters
+    scores[current]++;                      // increment symbol score
+    // playerScores kept in sync for legacy display (p1 = whoever plays humanSymbol)
+    if(gameMode==='ai'){
+      if(current === humanSymbol) playerScores.p1++; else playerScores.p2++;
+    } else if(gameMode==='online'){
+      if(current === mySymbol) playerScores.p1++; else playerScores.p2++;
+    } else {
+      // PvP: p1 is whichever symbol is on the left (not swap side)
+      const p1Sym = swap ? 'O' : 'X';
+      if(current === p1Sym) playerScores.p1++; else playerScores.p2++;
+    }
+    // update in-room score panel
+    const adS = document.getElementById('adScore');
+    if(adS) adS.textContent = `${playerScores.p1} — ${playerScores.p2}`;
 
     // --- WINNER SNAPSHOT FIX START ---
     // Snapshot MUST happen before any symbol toggle below.
-    // Compute p1IsX from PRE-TOGGLE values — humanSymbol/mySymbol not yet changed.
+    // FIX 2: use humanSymbol/mySymbol to detect winner identity — NOT
+    // p1SymbolThisRound (= roundStartPlayer). With starter alternation,
+    // roundStartPlayer is sometimes the AI's symbol, making _isP1 inverted.
     const _p1IsX = (gameMode==='ai')     ? humanSymbol==='X'
                  : (gameMode==='online')  ? mySymbol==='X'
                  : !swap;
-    const _isP1  = (current === p1SymbolThisRound);
-    finalWinnerSym    = current;   // locked — never overwritten until restart
-    finalP1IsX        = _p1IsX;   // locked — score display stays correct
+    // "Is the winner the human/host player?"
+    const _isP1  = (gameMode==='ai')     ? (current === humanSymbol)
+                 : (gameMode==='online')  ? (current === mySymbol)
+                 : (current === roundStartPlayer); // PvP: p1 = whoever started
+    finalWinnerSym    = current;
+    finalP1IsX        = _p1IsX;
     finalWinnerPlayer = _isP1
       ? (gameMode==='ai' ? 'YOU' : gameMode==='online' ? 'YOU' : 'P1')
       : (gameMode==='ai' ? 'CPU' : gameMode==='online' ? 'OPP' : 'P2');
@@ -1606,7 +1668,8 @@ restBtn.addEventListener('click',()=>{
   chaosLive=false; chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
   gameEl.style.transform='';
   // FIX 2: round counter advances HERE (on restart click), not on win/draw
-  updateRoundDisplay();
+  // FIX 3: call BOTH display functions together — single source of truth
+  updateRoundDisplay();   // syncs BOTH #roundText and #sbRound from same value
   playResetSound(); updateUI();
   // FIX 2 — trigger AI immediately if it is the starting player this round
   if(gameMode==='ai' && current !== humanSymbol) {
@@ -2318,6 +2381,18 @@ updateUI();
   // --- CSS 3D PANELS: grab #room3D so we can rotate it in sync with envGroup ---
   const cssRoom3D = document.getElementById('room3D');
 
+  // PANELS: apply base transform + inverse pitch cancel + inward facing
+  // This is the ONLY per-frame panel write — purely counteracts inherited pitch.
+  // rotateY(180deg) turns panels to face center. rotateX(-pitch) cancels tilt.
+  window.__PANELS_LOCKED__ = false;
+  const adPanels = Array.from(document.querySelectorAll('.adScreen'));
+  adPanels.forEach(p => {
+    // Store cleaned base (strip any stale inline; CSS ID rule is ground truth)
+    if(!p.dataset.cleanBase){
+      p.dataset.cleanBase = p.dataset.baseTransform || '';
+    }
+  });
+
   function envRender(now){
     requestAnimationFrame(envRender);
     const dt=Math.min((now-lastT)/1000,.05); lastT=now;
@@ -2328,30 +2403,19 @@ updateUI();
     envGroup.rotation.y=envAutoYaw+dragYaw;
     envGroup.rotation.x=dragPitch;
 
-    // #room3D rotation: ONLY rotateY (horizontal yaw).
-    // Pitch is handled exclusively by Three.js envGroup.rotation.x above.
-    // Applying rotateX to #camera or #room3D would tilt the panel container
-    // and make panels drift vertically — so we never rotate the CSS camera on X.
+    // CSS room: only yaw — panels orbit with room on horizontal axis
     if(cssRoom3D){
       const yaw = (envAutoYaw + dragYaw).toFixed(5);
       cssRoom3D.style.transform = `rotateY(${yaw}rad)`;
     }
-    // NOTE: no cssCamera.style.transform — perspective container stays neutral.
 
-    // --- FIX 1: COUNTER-PITCH — cancel inherited vertical tilt on each panel ---
-    // dragPitch drives envGroup.rotation.x (Three.js WebGL cage tilts vertically).
-    // The CSS panels live in the same visual space so they appear to shift vertically
-    // with the cage. Fix: apply -dragPitch to each panel's transform after its
-    // baseTransform so the vertical component is exactly neutralised.
-    // data-base-transform is read ONCE from HTML — never recalculated per frame.
-    {
-      const pitchDeg = (-dragPitch * 180 / Math.PI).toFixed(4);
-      document.querySelectorAll('.adScreen').forEach(p => {
-        const base = p.dataset.baseTransform || '';
-        p.style.transform = base + ` rotateX(${pitchDeg}deg)`;
-      });
-    }
-    // --- END FIX 1 ---
+    // Fix 1+2: cancel pitch + face inward — runs every frame after room rotates
+    const pitchDeg = (-(dragPitch) * 180 / Math.PI).toFixed(4);
+    adPanels.forEach(p => {
+      const base = p.dataset.cleanBase || '';
+      // rotateY(180deg) = face inward; rotateX(-pitch) = cancel vertical tilt
+      p.style.transform = base + ` rotateY(180deg) rotateX(${pitchDeg}deg)`;
+    });
 
     updateParticles(dt);
     renderer.render(scene,camera);
