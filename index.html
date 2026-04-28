@@ -659,7 +659,7 @@ body.env-grabbing { cursor: grabbing; }
   transform-style: preserve-3d;
 }
 
-/* Base panel style */
+/* Fix 2: panels always behind board */
 .adScreen {
   position: absolute;
   width: 300px;
@@ -668,30 +668,23 @@ body.env-grabbing { cursor: grabbing; }
   margin-top:  -90px;
   border-radius: 12px;
   pointer-events: none;
-  z-index: 0;
-  opacity: 1;
-  filter: none;
-  scale: 1;
+  z-index: 1;            /* panels behind board (z-index 10) */
   will-change: transform;
   background: rgba(10,10,22,0.6);
   border: 1.5px solid rgba(0,240,255,0.3);
-  backface-visibility: visible;          /* Fix 2: show panel from both sides */
-  -webkit-backface-visibility: visible;
-  transform-style: preserve-3d;         /* Fix 2: preserve children in 3D */
+  backface-visibility: hidden;         /* hide back — prevents 4 invisible panels */
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+#board {
+  position: relative;
+  z-index: 10;           /* board always in front of panels */
 }
 
 /* .front kept for future use */
 .adScreen.front {}
 
-/* CSS fallback transforms — MUST match data-base-transform exactly.
-   Inline style set by __PANELS_LOCKED__ takes precedence (same values). */
-#ad1 { transform: rotateX(0deg) rotateY(  0deg) translateZ(1500px) translateY(-300px); }
-#ad2 { transform: rotateX(0deg) rotateY( 51deg) translateZ(1500px) translateY(-150px); }
-#ad3 { transform: rotateX(0deg) rotateY(103deg) translateZ(1500px) translateY(   0px); }
-#ad4 { transform: rotateX(0deg) rotateY(154deg) translateZ(1500px) translateY( 150px); }
-#ad5 { transform: rotateX(0deg) rotateY(206deg) translateZ(1500px) translateY( 300px); }
-#ad6 { transform: rotateX(0deg) rotateY(257deg) translateZ(1500px) translateY(-450px); }
-#ad7 { transform: rotateX(0deg) rotateY(309deg) translateZ(1500px) translateY( 450px); }
+/* Panel CSS ID position rules removed — positions now set by __PANELS_INITIALIZED__ inline style */
 
 /* gameUI — completely outside #camera, fully flat, untouched by 3D */
 #gameUI {
@@ -966,8 +959,6 @@ body.env-grabbing { cursor: grabbing; }
 <div id="scoreBar">
   <span class="sb-x">P1: <span id="sbX">0</span></span>
   <span class="sb-sep">|</span>
-  <span class="sb-round" id="sbRound">RD 1/5</span>
-  <span class="sb-sep">|</span>
   <span class="sb-o">P2: <span id="sbO">0</span></span>
 </div>
 
@@ -979,7 +970,8 @@ body.env-grabbing { cursor: grabbing; }
 </div>
 
 <button id="restart">RESTART</button>
-<div id="roundDisplay"><span id="roundText">ROUND 1 / 5</span></div>
+<!-- SINGLE round counter — only updates on restart click -->
+<div id="roundDisplay"><span id="roundCounter">ROUND 1 / 5</span></div>
 <canvas id="chaosCanvas"></canvas>
 
 <!-- ===== MODE SCREENS (static HTML, shown via .active class) ===== -->
@@ -1003,6 +995,16 @@ body.env-grabbing { cursor: grabbing; }
         <span class="mode-btn-label" style="color:#00fff7">NEURAL SUPPORT</span>
         <span class="mode-btn-sub" style="color:#ff00ff">// FEED THE GRID</span>
       </a>
+      <button class="mode-btn mode-btn--donate" data-link="https://paypal.me/yourlink">
+        <span class="mode-btn-icon">∆</span>
+        <span class="mode-btn-label" style="color:#00fff7">ENERGY FEED</span>
+        <span class="mode-btn-sub" style="color:#ff00ff">// PAYPAL LINK</span>
+      </button>
+      <button class="mode-btn mode-btn--donate" data-link="https://ko-fi.com/yourlink">
+        <span class="mode-btn-icon">Ω</span>
+        <span class="mode-btn-label" style="color:#00fff7">SYSTEM FUND</span>
+        <span class="mode-btn-sub" style="color:#ff00ff">// KO-FI LINK</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1129,6 +1131,8 @@ const TOTAL_ROUNDS  = 5;
 let roundInProgress = false;
 let roundStartPlayer = 'X';
 let humanSymbol      = 'X';
+// roundNumber = display-only counter, increments ONLY in restart handler
+let roundNumber = 1;
 
 // FIX 3 — STARTER ROTATION
 // starterIndex NEVER resets — persists across all matches for strict fairness.
@@ -1306,10 +1310,9 @@ function clearCellHighlights() {
 function updateScoreBar() {
   const sbX = document.getElementById('sbX');   // repurposed as P1 score
   const sbO = document.getElementById('sbO');   // repurposed as P2 score
-  const sbR = document.getElementById('sbRound');
+  // NOTE: sbRound intentionally NOT updated here — owned by updateRoundDisplay()
   if (sbX) sbX.textContent = playerScores.p1;
   if (sbO) sbO.textContent = playerScores.p2;
-  if (sbR) sbR.textContent = 'RD ' + Math.min(completedRounds + 1, TOTAL_ROUNDS) + '/' + TOTAL_ROUNDS;
 }
 // --- POLISH + SCORE FIX END ---
 
@@ -1519,14 +1522,12 @@ function updateRoundDisplay() {
   // --- UI LOCK FIX START: block stray calls after round ends ---
   if(!isRoundActive && gameOver) return;
   // --- UI LOCK FIX END ---
-  // Single source of truth for both round displays
-  const n   = Math.min(completedRounds + 1, TOTAL_ROUNDS);
-  const rt  = document.getElementById('roundText');
-  const sbr = document.getElementById('sbRound');
-  if(rt)  rt.textContent  = `ROUND ${n} / ${TOTAL_ROUNDS}`;
-  if(sbr) sbr.textContent = `RD ${n}/${TOTAL_ROUNDS}`;
+  // Single round counter — only #roundCounter exists now
+  const el = document.getElementById('roundCounter');
+  if(el) el.textContent = `ROUND ${roundNumber} / ${TOTAL_ROUNDS}`;
+  // keep adRound panel in sync
   const adR = document.getElementById('adRound');
-  if(adR) adR.textContent = `${n} / ${TOTAL_ROUNDS}`;
+  if(adR) adR.textContent = `${roundNumber} / ${TOTAL_ROUNDS}`;
 }
 
 // ============================================================
@@ -1690,9 +1691,9 @@ restBtn.addEventListener('click',()=>{
   if(chaosId){cancelAnimationFrame(chaosId);chaosId=null;}
   chaosLive=false; chaosCtx.clearRect(0,0,chaosCv.width,chaosCv.height);
   gameEl.style.transform='';
-  // FIX 2: round counter advances HERE (on restart click), not on win/draw
-  // FIX 3: call BOTH display functions together — single source of truth
-  updateRoundDisplay();   // syncs BOTH #roundText and #sbRound from same value
+  // Round counter: increment display variable ONLY here, never on win/draw
+  if(roundNumber < TOTAL_ROUNDS) roundNumber++;
+  updateRoundDisplay();
   playResetSound(); updateUI();
   // FIX 2 — trigger AI immediately if it is the starting player this round
   if(gameMode==='ai' && current !== humanSymbol) {
@@ -2082,6 +2083,14 @@ document.getElementById('btnRematch').addEventListener('click',()=>{matchOverScr
 document.getElementById('btnModeSelect').addEventListener('click',showModeScreen);
 backBtnEl.addEventListener('click',()=>{disconnectOnline();showModeScreen();});
 
+// Fix 3: donation button click handler for data-link buttons
+document.querySelectorAll('.mode-btn--donate[data-link]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const link=btn.getAttribute('data-link');
+    if(link) window.open(link,'_blank','noopener');
+  });
+});
+
 // Init — show mode screen, hide game controls
 restBtn.style.display='none';
 roundDisplayEl.style.display='none';
@@ -2401,20 +2410,23 @@ updateUI();
   });
 
   let lastT=0;
-  // --- CSS 3D PANELS: grab #room3D so we can rotate it in sync with envGroup ---
   const cssRoom3D = document.getElementById('room3D');
 
-  // PANELS: apply base transform + inverse pitch cancel + inward facing
-  // This is the ONLY per-frame panel write — purely counteracts inherited pitch.
-  // rotateY(180deg) turns panels to face center. rotateX(-pitch) cancels tilt.
-  window.__PANELS_LOCKED__ = false;
-  const adPanels = Array.from(document.querySelectorAll('.adScreen'));
-  adPanels.forEach(p => {
-    // Store cleaned base (strip any stale inline; CSS ID rule is ground truth)
-    if(!p.dataset.cleanBase){
-      p.dataset.cleanBase = p.dataset.baseTransform || '';
-    }
-  });
+  // ── PANEL INIT — runs ONCE, panels NEVER touched again ──────────────────
+  if(!window.__PANELS_INITIALIZED__){
+    const panels = document.querySelectorAll('.adScreen');
+    const total  = panels.length;
+    const radius = 1200;
+    panels.forEach((panel, i) => {
+      const angle = (360 / total) * i;
+      // rotateY(angle) — orbit panel around ring
+      // translateZ(radius) — push to wall
+      // rotateY(180deg) — flip to face inward toward board
+      panel.style.transform = `rotateY(${angle}deg) translateZ(${radius}px) rotateY(180deg)`;
+    });
+    window.__PANELS_INITIALIZED__ = true;
+  }
+  // ── END PANEL INIT ───────────────────────────────────────────────────────
 
   function envRender(now){
     requestAnimationFrame(envRender);
@@ -2422,23 +2434,17 @@ updateUI();
     envAutoYaw+=.00018;
     if(!isDraggingEnv){dragVelX*=.88;dragVelY*=.88;dragYaw-=dragVelX*.0015;dragPitch+=dragVelY*.0015;}
 
-    // Three.js world rotation (WebGL prison cage + particles)
+    // Three.js WebGL cage rotation
     envGroup.rotation.y=envAutoYaw+dragYaw;
     envGroup.rotation.x=dragPitch;
 
-    // CSS room: only yaw — panels orbit with room on horizontal axis
+    // CSS room carries BOTH pitch + yaw — panels move ONLY because parent rotates
+    // No per-panel updates ever. This is the only moving element.
     if(cssRoom3D){
-      const yaw = (envAutoYaw + dragYaw).toFixed(5);
-      cssRoom3D.style.transform = `rotateY(${yaw}rad)`;
+      const yaw   = (envAutoYaw + dragYaw).toFixed(5);
+      const pitch  = dragPitch.toFixed(5);
+      cssRoom3D.style.transform = `rotateX(${pitch}rad) rotateY(${yaw}rad)`;
     }
-
-    // Fix 1+2: cancel pitch + face inward — runs every frame after room rotates
-    const pitchDeg = (-(dragPitch) * 180 / Math.PI).toFixed(4);
-    adPanels.forEach(p => {
-      const base = p.dataset.cleanBase || '';
-      // rotateY(180deg) = face inward; rotateX(-pitch) = cancel vertical tilt
-      p.style.transform = base + ` rotateY(180deg) rotateX(${pitchDeg}deg)`;
-    });
 
     updateParticles(dt);
     renderer.render(scene,camera);
