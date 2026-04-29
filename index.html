@@ -668,17 +668,27 @@ body.env-grabbing { cursor: grabbing; }
   margin-top:  -90px;
   border-radius: 12px;
   pointer-events: none;
-  z-index: 1;            /* panels behind board (z-index 10) */
+  z-index: 1;
   will-change: transform;
   background: rgba(10,10,22,0.6);
   border: 1.5px solid rgba(0,240,255,0.3);
-  backface-visibility: hidden;         /* hide back — prevents 4 invisible panels */
-  -webkit-backface-visibility: hidden;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
   transform-style: preserve-3d;
+}
+/* dim variant — keep visible, just tinted down */
+.adScreen--dim {
+  opacity: 0.22 !important;
+  border-color: rgba(0,240,255,0.10);
+  background: rgba(4,0,18,0.25);
+  box-shadow: none;
 }
 #board {
   position: relative;
-  z-index: 10;           /* board always in front of panels */
+  z-index: 10;
 }
 
 /* .front kept for future use */
@@ -704,6 +714,56 @@ body.env-grabbing { cursor: grabbing; }
   z-index: 20;
 }
 
+/* ── PART 1: PANEL CSS — all 7 always visible ── */
+.panel {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  transform-style: preserve-3d;
+  position: absolute;
+  width: 300px;
+  height: 180px;
+  /* CENTER on the zero-size #adLayer anchor — critical for equal ring radius */
+  margin-left: -150px;
+  margin-top:  -90px;
+  border-radius: 12px;
+  background: rgba(10,10,22,0.75);
+  border: 1.5px solid rgba(0,240,255,0.4);
+  box-shadow: 0 0 18px rgba(0,240,255,0.2);
+  pointer-events: none;
+}
+.panel-inner {
+  transform: rotateY(180deg);   /* face inward — panel shell unflipped so all 7 visible */
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Courier New', monospace;
+  color: #00f0ff;
+  letter-spacing: 2px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── PART 2: DRAW TEXT — split left + right, clear gap from board ── */
+.side.draw-mode {
+  justify-content: center;
+  position: relative;
+}
+.drawBig {
+  font-size: 82px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ff0033;
+  text-shadow:
+    0 0 10px #fff, 0 0 25px #fff,
+    0 0 20px #ff0033, 0 0 45px #ff0033, 0 0 90px #ff0033;
+  animation: drawPulse 3.2s ease-in-out infinite;
+  display: block;
+  /* Keep each DRAW word on its own side — margin pushes it away from board centre */
+  margin: 0 8px;
+}
+
 /* Fix 6: cyberpunk donation tile */
 .mode-btn--donate {
   border-color: rgba(0,255,247,0.6);
@@ -713,6 +773,43 @@ body.env-grabbing { cursor: grabbing; }
 .mode-btn--donate:hover {
   border-color: #00fff7;
   box-shadow: 0 0 30px rgba(0,255,247,0.55), 0 0 60px rgba(0,255,247,0.2);
+}
+
+/* Unified donation hub */
+.donation-hub {
+  border: 2px solid rgba(0,255,247,0.7) !important;
+  box-shadow: 0 0 20px #00fff7, inset 0 0 10px #ff00ff !important;
+  flex-direction: column;
+  cursor: default;
+}
+.donation-hub:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 32px #00fff7, inset 0 0 20px #ff00ff !important;
+}
+.donation-options {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.donation-options button {
+  background: transparent;
+  border: 1px solid #ff00ff;
+  color: #00fff7;
+  padding: 6px 12px;
+  font-family: 'Arial Black', monospace;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+.donation-options button:hover {
+  background: rgba(255,0,255,0.12);
+  box-shadow: 0 0 10px #ff00ff;
+  color: #fff;
 }
 @keyframes adBreath {
   0%, 100% { opacity: 0.72; }
@@ -735,6 +832,7 @@ body.env-grabbing { cursor: grabbing; }
 .adCard {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 14px 20px; width: 100%;
+  transform: rotateY(180deg);  /* content faces inward — panel shell stays unflipped */
 }
 .adLabel {
   font-family: 'Arial Black', Impact, sans-serif;
@@ -989,22 +1087,16 @@ body.env-grabbing { cursor: grabbing; }
         <span class="mode-btn-label">VS PLAYER</span>
         <span class="mode-btn-sub">Online · 2 players required</span>
       </button>
-      <a class="mode-btn mode-btn--donate" href="https://buymeacoffee.com" target="_blank" rel="noopener"
-         style="text-decoration:none">
+      <!-- Donation Hub — replaces individual donation tiles -->
+      <div class="mode-btn donation-hub">
         <span class="mode-btn-icon">⟁</span>
-        <span class="mode-btn-label" style="color:#00fff7">NEURAL SUPPORT</span>
-        <span class="mode-btn-sub" style="color:#ff00ff">// FEED THE GRID</span>
-      </a>
-      <button class="mode-btn mode-btn--donate" data-link="https://paypal.me/yourlink">
-        <span class="mode-btn-icon">∆</span>
-        <span class="mode-btn-label" style="color:#00fff7">ENERGY FEED</span>
-        <span class="mode-btn-sub" style="color:#ff00ff">// PAYPAL LINK</span>
-      </button>
-      <button class="mode-btn mode-btn--donate" data-link="https://ko-fi.com/yourlink">
-        <span class="mode-btn-icon">Ω</span>
-        <span class="mode-btn-label" style="color:#00fff7">SYSTEM FUND</span>
-        <span class="mode-btn-sub" style="color:#ff00ff">// KO-FI LINK</span>
-      </button>
+        <span class="mode-btn-label" style="color:#00fff7">SUPPORT THE SYSTEM</span>
+        <div class="donation-options">
+          <button data-link="https://paypal.me/yourlink">PayPal</button>
+          <button data-link="https://ko-fi.com/yourlink">Ko-fi</button>
+          <button data-link="https://buymeacoffee.com">BuyCoffee</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1308,11 +1400,13 @@ function clearCellHighlights() {
 // UPDATE SCOREBAR — shows player-identity scores (P1 / P2), not symbol scores
 // --- POLISH + SCORE FIX START ---
 function updateScoreBar() {
-  const sbX = document.getElementById('sbX');   // repurposed as P1 score
-  const sbO = document.getElementById('sbO');   // repurposed as P2 score
-  // NOTE: sbRound intentionally NOT updated here — owned by updateRoundDisplay()
+  const sbX = document.getElementById('sbX');
+  const sbO = document.getElementById('sbO');
   if (sbX) sbX.textContent = playerScores.p1;
   if (sbO) sbO.textContent = playerScores.p2;
+  // keep in-room score panel in sync
+  const adS = document.getElementById('adScore');
+  if(adS) adS.textContent = `${playerScores.p1} — ${playerScores.p2}`;
 }
 // --- POLISH + SCORE FIX END ---
 
@@ -1797,6 +1891,7 @@ function showMatchOver(){
 }
 function fullReset(){
   completedRounds=0; roundInProgress=false;
+  roundNumber=1;  // reset display counter for new match
   scores.X=0; scores.O=0;
   playerScores.p1=0; playerScores.p2=0;
   // --- WINNER SNAPSHOT FIX START: clear snapshot on full match reset ---
@@ -2083,9 +2178,10 @@ document.getElementById('btnRematch').addEventListener('click',()=>{matchOverScr
 document.getElementById('btnModeSelect').addEventListener('click',showModeScreen);
 backBtnEl.addEventListener('click',()=>{disconnectOnline();showModeScreen();});
 
-// Fix 3: donation button click handler for data-link buttons
-document.querySelectorAll('.mode-btn--donate[data-link]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
+// Donation hub button click handler
+document.querySelectorAll('.donation-options button').forEach(btn=>{
+  btn.addEventListener('click',e=>{
+    e.stopPropagation(); // don't bubble to hub tile
     const link=btn.getAttribute('data-link');
     if(link) window.open(link,'_blank','noopener');
   });
@@ -2412,18 +2508,38 @@ updateUI();
   let lastT=0;
   const cssRoom3D = document.getElementById('room3D');
 
-  // ── PANEL INIT — runs ONCE, panels NEVER touched again ──────────────────
+  // ── PANEL INIT — force-create exactly 7 in #adLayer, runs ONCE ─────────
+  // #adLayer is position:absolute; top:50%; left:50%; width:0; height:0
+  // This makes it a zero-size anchor at the exact viewport/room center.
+  // panels appended here radiate outward from that same center as the board.
+  // Appending to cssRoom3D (full-size) offset panels from top-left → 3 off-screen.
+  window.__PANELS_INITIALIZED__ = false;
+  const adLayer = document.getElementById('adLayer');
+  const panelTarget = adLayer || cssRoom3D; // fallback to room if adLayer missing
+
   if(!window.__PANELS_INITIALIZED__){
-    const panels = document.querySelectorAll('.adScreen');
-    const total  = panels.length;
-    const radius = 1200;
-    panels.forEach((panel, i) => {
-      const angle = (360 / total) * i;
-      // rotateY(angle) — orbit panel around ring
-      // translateZ(radius) — push to wall
-      // rotateY(180deg) — flip to face inward toward board
-      panel.style.transform = `rotateY(${angle}deg) translateZ(${radius}px) rotateY(180deg)`;
-    });
+    document.querySelectorAll('.adScreen, .panel').forEach(p=>p.remove());
+
+    const TOTAL_PANELS = 7;
+    const radius       = 1400;  // uniform — all panels same distance from center
+    const labels = ['Ξ CORE LINK','∆ SIGNAL','Ω GRID SYNC','⟁ DATA FLOW','▒ NODE','⌬ RELAY','⏚ BEACON'];
+
+    for(let i=0;i<TOTAL_PANELS;i++){
+      const panel = document.createElement('div');
+      panel.className = 'panel';
+
+      const inner = document.createElement('div');
+      inner.className = 'panel-inner';
+      inner.innerHTML = `<span class="adLabel">${labels[i]}</span>`;
+      panel.appendChild(inner);
+
+      panelTarget.appendChild(panel);
+
+      // Equal angle steps — 360/7 ≈ 51.4° — perfect even ring
+      // ONLY rotateY + translateZ: no translateX/Y, no camera values, never updated again
+      const angle = (360 / TOTAL_PANELS) * i;
+      panel.style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
+    }
     window.__PANELS_INITIALIZED__ = true;
   }
   // ── END PANEL INIT ───────────────────────────────────────────────────────
