@@ -139,9 +139,9 @@ body::after {
   transform: translateX(0);
 }
 /* Left side draw: push further left */
-#left.draw-mode  { transform: translateX(-32px); }
+#left.draw-mode  { transform: translateX(-58px); }
 /* Right side draw: push further right */
-#right.draw-mode { transform: translateX( 32px); }
+#right.draw-mode { transform: translateX( 58px); }
 
 .drawBig {
   color: #ff0033; font-size: 82px; font-weight: 900; letter-spacing: 2px; line-height: 1;
@@ -2085,7 +2085,7 @@ function setupPeer(asHost){
 
   // FIX 4 — short friendly room code: 4 digits - 4 digits (e.g. 4821-7392)
   function generateRoomCode(){
-    const part=()=>Math.floor(1000+Math.random()*9000);
+    const part=()=>String(Math.floor(Math.random()*90)+10); // 10–99 → always 2 digits
     return `${part()}-${part()}`;
   }
 
