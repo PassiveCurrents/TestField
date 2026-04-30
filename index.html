@@ -1162,11 +1162,11 @@ body.env-grabbing { cursor: grabbing; }
         <span class="don-label">KO-FI</span>
         <span class="don-sub">Buy a coffee</span>
       </button>
-      <!-- Solana — copy address -->
-      <button class="donation-option-btn don-crypto" data-copy="C8sxPhhqm5z6bnj3ukQ71fJg8tke9Nj7TH3hccuVMB7k" id="solanaCopyBtn">
+      <!-- Solana — shows popup modal with address + copy button -->
+      <button class="donation-option-btn don-crypto" id="solanaCopyBtn">
         <span class="don-icon">◎</span>
         <span class="don-label">SOLANA</span>
-        <span class="don-sub" id="solanaSub">Tap to copy address</span>
+        <span class="don-sub">Tap to show address</span>
       </button>
     </div>
 
@@ -1243,6 +1243,50 @@ body.env-grabbing { cursor: grabbing; }
   <div id="statusCount">1 ░▒▓ SIGNAL</div>
 </div>
 <!-- --- NEW CODE END: ONLINE STATUS HUD --- -->
+
+<!-- Solana address popup modal (z-index 3000 — above all screens) -->
+<div id="solanaModal" style="
+  display:none; position:fixed; inset:0; z-index:3000;
+  align-items:center; justify-content:center;
+  background:rgba(4,0,18,0.88);">
+  <div style="
+    background:rgba(10,10,24,0.97);
+    border:2px solid rgba(255,0,204,0.7);
+    border-radius:22px;
+    box-shadow:0 0 40px rgba(255,0,204,0.4),0 0 80px rgba(255,0,204,0.15),inset 0 0 20px rgba(255,0,204,0.06);
+    padding:36px 32px 28px;
+    max-width:420px; width:90vw;
+    text-align:center;
+    font-family:'Arial Black',Impact,sans-serif;">
+    <div style="font-size:32px;color:#ff00cc;margin-bottom:10px">◎</div>
+    <div style="font-size:18px;font-weight:900;letter-spacing:4px;color:#00fff7;margin-bottom:6px">SOLANA</div>
+    <div style="font-size:11px;letter-spacing:2px;color:rgba(255,0,204,0.6);margin-bottom:22px">// CRYPTO SUPPORT</div>
+    <div id="solAddrBox" style="
+      background:rgba(0,0,0,0.5);
+      border:1px solid rgba(255,0,204,0.4);
+      border-radius:10px; padding:14px 12px;
+      font-family:'Courier New',monospace; font-size:11px;
+      letter-spacing:1px; color:#aaffff;
+      word-break:break-all; line-height:1.6;
+      margin-bottom:18px; user-select:all;">C8sxPhhqm5z6bnj3ukQ71fJg8tke9Nj7TH3hccuVMB7k</div>
+    <button id="solCopyBtn" style="
+      width:100%; padding:14px;
+      background:rgba(0,15,35,0.9);
+      border:2px solid rgba(255,0,204,0.65);
+      border-radius:14px; color:#00fff7;
+      font-family:'Arial Black',Impact,sans-serif;
+      font-size:14px; font-weight:900; letter-spacing:3px;
+      cursor:pointer; transition:all 0.18s ease; margin-bottom:12px;">
+      COPY ADDRESS
+    </button>
+    <button id="solCloseBtn" style="
+      background:transparent; border:none;
+      color:rgba(255,255,255,0.3); font-size:12px;
+      letter-spacing:2px; cursor:pointer; font-family:monospace;">
+      × CLOSE
+    </button>
+  </div>
+</div>
 
 </div><!-- end #gameUI -->
 
@@ -2248,24 +2292,52 @@ document.getElementById('btnDonate').addEventListener('click',()=>{
 });
 document.getElementById('btnDonateBack').addEventListener('click',showModeScreen);
 
-// Donation option buttons — open link or copy address
+// Donation option buttons — open link
 document.querySelectorAll('.donation-option-btn[data-link]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     window.open(btn.getAttribute('data-link'),'_blank','noopener');
   });
 });
-document.querySelectorAll('.donation-option-btn[data-copy]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const addr = btn.getAttribute('data-copy');
-    navigator.clipboard.writeText(addr).then(()=>{
-      const sub = btn.querySelector('#solanaSub') || btn.querySelector('.don-sub');
-      if(sub){ sub.textContent='✓ COPIED!'; setTimeout(()=>{ sub.textContent='Tap to copy address'; },2200); }
+
+// Solana button → show popup modal (no link, no old data-copy)
+const solanaModal  = document.getElementById('solanaModal');
+const solCopyBtn   = document.getElementById('solCopyBtn');
+const solCloseBtn  = document.getElementById('solCloseBtn');
+const solanaCopyBtn = document.getElementById('solanaCopyBtn');
+const SOL_ADDRESS = 'C8sxPhhqm5z6bnj3ukQ71fJg8tke9Nj7TH3hccuVMB7k';
+
+if(solanaCopyBtn && solanaModal){
+  solanaCopyBtn.addEventListener('click', ()=>{
+    solanaModal.style.display = 'flex';
+  });
+}
+if(solCloseBtn){
+  solCloseBtn.addEventListener('click', ()=>{
+    solanaModal.style.display = 'none';
+  });
+}
+// Close on backdrop click
+if(solanaModal){
+  solanaModal.addEventListener('click', e=>{
+    if(e.target === solanaModal) solanaModal.style.display = 'none';
+  });
+}
+if(solCopyBtn){
+  solCopyBtn.addEventListener('click', ()=>{
+    const original = solCopyBtn.textContent;
+    navigator.clipboard.writeText(SOL_ADDRESS).then(()=>{
+      solCopyBtn.textContent = '✓ COPIED!';
+      solCopyBtn.style.borderColor = 'rgba(0,240,255,0.8)';
+      setTimeout(()=>{
+        solCopyBtn.textContent = original;
+        solCopyBtn.style.borderColor = 'rgba(255,0,204,0.65)';
+      }, 2200);
     }).catch(()=>{
-      // Fallback for browsers without clipboard API
-      prompt('Copy Solana address:', addr);
+      // Fallback: prompt with address for manual copy
+      prompt('Copy Solana address:', SOL_ADDRESS);
     });
   });
-});
+}
 document.getElementById('btnOnline').addEventListener('click',()=>{
   modeScreenEl.classList.remove('active');
   lobbyScreenEl.classList.add('active');
