@@ -1130,7 +1130,7 @@ body.env-grabbing { cursor: grabbing; }
       </button>
       <!-- DONATE button → opens donation submenu screen -->
       <button class="mode-btn" id="btnDonate">
-        <span class="mode-btn-icon" style="font-size:28px;color:#00fff7">Α</span>
+        <span class="mode-btn-icon" style="font-size:28px;color:#00fff7">α/span>
         <span class="mode-btn-label" style="color:#00fff7">DONATE</span>
         <span class="mode-btn-sub" style="color:#ff00ff">// FEED THE GRID</span>
       </button>
@@ -2097,6 +2097,9 @@ function setupPeer(asHost){
     document.getElementById('lobbyChoice').style.display='none';
     document.getElementById('lobbyHostPanel').style.display='block';
     document.getElementById('lobbyStatus').textContent='Getting room code…';
+    // BACK in host panel → returns to lobby choice (not main menu)
+    backBtnEl.textContent='← BACK';
+    backBtnEl.__lobbyBack = true;
     peer.on('open',id=>{const rc=document.getElementById('roomCode');if(rc) rc.textContent=id;document.getElementById('lobbyStatus').textContent='Ready — share the code!';});
     peer.on('connection',c=>{
       conn=c;
@@ -2108,6 +2111,9 @@ function setupPeer(asHost){
     document.getElementById('lobbyChoice').style.display='none';
     document.getElementById('lobbyGuestPanel').style.display='block';
     document.getElementById('lobbyStatus').textContent="Enter the host's room code:";
+    // BACK in guest panel → returns to lobby choice (not main menu)
+    backBtnEl.textContent='← BACK';
+    backBtnEl.__lobbyBack = true;
     document.getElementById('btnJoin').onclick=()=>{
       const code=document.getElementById('codeInput').value.trim();
       if(!code) return;
@@ -2351,7 +2357,21 @@ document.getElementById('btnHost').addEventListener('click',()=>setupPeer(true))
 document.getElementById('btnGuest').addEventListener('click',()=>setupPeer(false));
 document.getElementById('btnRematch').addEventListener('click',()=>{matchOverScreenEl.classList.remove('active');fullReset();});
 document.getElementById('btnModeSelect').addEventListener('click',showModeScreen);
-backBtnEl.addEventListener('click',()=>{disconnectOnline();showModeScreen();});
+backBtnEl.addEventListener('click',()=>{
+  if(backBtnEl.__lobbyBack){
+    // Return to lobby choice within the online arena screen
+    backBtnEl.__lobbyBack = false;
+    backBtnEl.textContent = '← MENU';
+    disconnectOnline();
+    document.getElementById('lobbyChoice').style.display='flex';
+    document.getElementById('lobbyHostPanel').style.display='none';
+    document.getElementById('lobbyGuestPanel').style.display='none';
+    document.getElementById('lobbyStatus').textContent='Choose your role:';
+  } else {
+    disconnectOnline();
+    showModeScreen();
+  }
+});
 
 // Donation hub button click handler
 document.querySelectorAll('.donation-options button').forEach(btn=>{
