@@ -888,21 +888,75 @@ body.env-grabbing { cursor: grabbing; }
 }
 /* --- END FIX 6 --- */
 
-/* --- FIX 3: MOBILE CSS --- */
+/* --- FIX 3: MOBILE SCALING (portrait + landscape) --- */
+
+/* Shared mobile base */
 @media (max-width: 768px) {
-  #game { transform: scale(0.72); transform-origin: top center; gap: 18px; }
-  #title { margin-bottom: 10px; }
-  #clashText { font-size: 52px; }
-  #xoSvg { width: 130px !important; height: 130px !important; }
-  #restart { padding: 12px 44px; font-size: 18px; }
-  .side { width: 100px; }
-  .side .sym { font-size: 56px; }
-  body { -webkit-text-size-adjust: 100%; }
+  body { -webkit-text-size-adjust: 100%; overflow: hidden; }
+
+  /* Scale game area to fit viewport, preserve center */
+  #game {
+    transform: scale(0.72);
+    transform-origin: center center;
+    gap: 14px;
+  }
+  #title     { margin-bottom: 8px; }
+  #clashText { font-size: 48px; }
+  #xoSvg     { width: 110px !important; height: 110px !important; }
+  #restart   { padding: 10px 40px; font-size: 16px; margin-top: 20px; }
+  .side      { width: 86px; }
+  .side .sym { font-size: 52px; }
+  .side .score-num { font-size: 20px; }
+  .mode-inner { padding: 28px 24px; gap: 18px; }
+  .mode-title { font-size: 38px; }
+  .mode-btn-label { font-size: 17px; }
+  .donation-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
 }
-@media (max-width: 480px) {
-  #game { transform: scale(0.56); transform-origin: top center; }
+
+/* Portrait: very small screens — aggressive scale */
+@media (max-width: 480px) and (orientation: portrait) {
+  #game  { transform: scale(0.52); transform-origin: center center; }
+  #title { transform: scale(0.8); transform-origin: top center; }
+  #clashText { font-size: 40px; }
+  #restart { padding: 8px 30px; font-size: 14px; }
+  .mode-inner { padding: 20px 16px; }
+  .mode-title { font-size: 30px; }
 }
-/* --- END FIX 3: MOBILE CSS --- */
+
+/* Landscape: phones on their side — use horizontal space */
+@media (max-height: 500px) and (orientation: landscape) {
+  body { flex-direction: row; align-items: center; justify-content: center; gap: 0; }
+  #title { display: none; }  /* hide title to save vertical space */
+  #game  { transform: scale(0.65); transform-origin: center center; }
+  #restart { margin-top: 8px; padding: 8px 32px; font-size: 14px; }
+  .mode-inner { padding: 16px 20px; gap: 12px; max-height: 95vh; overflow-y: auto; }
+  .mode-title { font-size: 28px; }
+  .mode-buttons { flex-direction: row; }
+  .donation-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+}
+/* --- END FIX 3 --- */
+
+/* --- FIX 4: BACKGROUND PERFORMANCE OPTIMIZATION --- */
+/* Reduce CSS glow complexity on mobile — heavy box-shadows are the #1 paint cost */
+@media (max-width: 768px) {
+  /* Board: single shadow instead of triple-layered */
+  #board {
+    box-shadow: 0 0 50px #00f0ff, inset 0 0 20px #00f0ff33 !important;
+    animation: none !important;        /* disable boardBreath on mobile */
+  }
+  /* Cells: remove expensive inset glow */
+  .cell { box-shadow: none !important; }
+  /* Marks: reduce glow layers */
+  .x { text-shadow: 0 0 14px #00f0ff !important; }
+  .o { text-shadow: 0 0 14px #ff00cc !important; }
+  /* Side symbols: simplify glow */
+  .side.x-player .sym { text-shadow: 0 0 14px #00f0ff !important; }
+  .side.o-player .sym { text-shadow: 0 0 14px #ff00cc !important; }
+  /* Body grid animation: slow down to 60s to cut repaints */
+  body::before { animation-duration: 60s !important; }
+  /* Env canvas: lower pixel ratio handled in JS (see below) */
+}
+/* --- END FIX 4 --- */
 
 </style>
 </head>
@@ -1197,6 +1251,16 @@ body.env-grabbing { cursor: grabbing; }
     <div id="lobbyHostPanel" style="display:none;text-align:center">
       <div class="lobby-label">YOUR ROOM CODE</div>
       <div id="roomCode" class="room-code">——</div>
+      <button id="copyCodeBtn" style="
+        margin-top:10px; padding:10px 28px;
+        background:rgba(0,240,255,0.08); border:1.5px solid rgba(0,240,255,0.5);
+        border-radius:30px; color:#00f0ff;
+        font-family:'Arial Black',Impact,sans-serif; font-size:13px;
+        font-weight:900; letter-spacing:3px; cursor:pointer;
+        transition:all 0.18s; min-height:44px;">
+        COPY CODE
+      </button>
+      <div id="copyFeedback" style="font-size:11px;color:#baff00;opacity:0;transition:opacity 0.3s;margin-top:4px;letter-spacing:2px">✓ COPIED!</div>
       <div class="lobby-hint" style="margin-top:8px">Share this code with your opponent</div>
       <div id="waitingMsg" class="waiting-msg" style="margin-top:16px"><span class="waiting-dot"></span>Waiting for opponent…</div>
     </div>
@@ -2092,40 +2156,109 @@ function setupPeer(asHost){
   // Host uses the generated code as the PeerJS peer ID so guest can connect with it
   const peerId = asHost ? generateRoomCode() : undefined;
   peer=new Peer(peerId,{debug:0});
-  peer.on('error',err=>{const st=document.getElementById('lobbyStatus');if(st) st.textContent='Error: '+err.type;});
+  peer.on('error',err=>{
+    const st=document.getElementById('lobbyStatus');
+    if(st) st.textContent='Error: '+err.type;
+    console.error('PVP ERROR:',err.type);
+  });
+
   if(asHost){
     document.getElementById('lobbyChoice').style.display='none';
     document.getElementById('lobbyHostPanel').style.display='block';
     document.getElementById('lobbyStatus').textContent='Getting room code…';
-    // BACK in host panel → returns to lobby choice (not main menu)
     backBtnEl.textContent='← BACK';
     backBtnEl.__lobbyBack = true;
-    peer.on('open',id=>{const rc=document.getElementById('roomCode');if(rc) rc.textContent=id;document.getElementById('lobbyStatus').textContent='Ready — share the code!';});
+
+    peer.on('open',id=>{
+      const rc=document.getElementById('roomCode');
+      if(rc) rc.textContent=id;
+      document.getElementById('lobbyStatus').textContent='Ready — share the code!';
+
+      // Fix 2: copy button wired after we have the actual code
+      const copyBtn=document.getElementById('copyCodeBtn');
+      const copyFb =document.getElementById('copyFeedback');
+      if(copyBtn){
+        // Auto-copy when room is created
+        navigator.clipboard.writeText(id).catch(()=>{});
+        copyBtn.addEventListener('click',()=>{
+          navigator.clipboard.writeText(id).then(()=>{
+            if(copyFb){ copyFb.style.opacity='1'; setTimeout(()=>{ copyFb.style.opacity='0'; },1500); }
+          }).catch(()=>{ prompt('Copy room code:',id); });
+        });
+      }
+    });
+
     peer.on('connection',c=>{
       conn=c;
-      conn.on('open',()=>{document.getElementById('waitingMsg').innerHTML='✅ Opponent connected! Starting…';setTimeout(()=>{gameMode='online';hideModeScreen();fullReset();},800);});
-      conn.on('data',handleOnlineData);
+      conn.on('open',()=>{
+        // Fix 1: send handshake — wait for guest JOIN_REQUEST before starting
+        document.getElementById('waitingMsg').innerHTML='<span class="waiting-dot"></span>Handshaking…';
+      });
+      conn.on('data',data=>{
+        // Fix 1: handshake protocol — host accepts, then starts
+        if(data && data.type==='JOIN_REQUEST'){
+          console.log('PVP: JOIN_REQUEST received');
+          try{ conn.send({type:'JOIN_ACCEPT'}); }catch(e){}
+          document.getElementById('waitingMsg').innerHTML='✅ Opponent connected! Starting…';
+          setTimeout(()=>{gameMode='online';hideModeScreen();fullReset();},800);
+        } else {
+          handleOnlineData(data);
+        }
+      });
       conn.on('close',()=>{if(gameMode==='online'){alert('Opponent disconnected.');showModeScreen();}});
     });
+
   } else {
     document.getElementById('lobbyChoice').style.display='none';
     document.getElementById('lobbyGuestPanel').style.display='block';
     document.getElementById('lobbyStatus').textContent="Enter the host's room code:";
-    // BACK in guest panel → returns to lobby choice (not main menu)
     backBtnEl.textContent='← BACK';
     backBtnEl.__lobbyBack = true;
+
     document.getElementById('btnJoin').onclick=()=>{
       const code=document.getElementById('codeInput').value.trim();
       if(!code) return;
       const js=document.getElementById('joinStatus');
       if(js) js.textContent='Connecting…';
+
+      let retries=0;
+      const MAX_RETRIES=3;
+
       function doConnect(){
+        if(js) js.textContent=retries>0?`Retry ${retries}/${MAX_RETRIES}…`:'Connecting…';
         conn=peer.connect(code,{reliable:true});
-        conn.on('open',()=>{if(js)js.textContent='✅ Connected!';setTimeout(()=>{gameMode='online';hideModeScreen();fullReset();},600);});
-        conn.on('data',handleOnlineData);
+
+        // Fix 1: timeout 5s
+        const timeout=setTimeout(()=>{
+          if(js) js.textContent='Connection failed — retry';
+          console.error('PVP: HOST NOT FOUND — timeout');
+          if(retries<MAX_RETRIES){ retries++; setTimeout(doConnect,500); }
+        },5000);
+
+        conn.on('open',()=>{
+          clearTimeout(timeout);
+          if(js) js.textContent='Waiting for host…';
+          console.log('PVP: connected, sending JOIN_REQUEST');
+          try{ conn.send({type:'JOIN_REQUEST'}); }catch(e){ console.error('PVP: SYNC ERROR',e); }
+        });
+        conn.on('data',data=>{
+          if(data && data.type==='JOIN_ACCEPT'){
+            console.log('PVP: JOIN_ACCEPT received — starting');
+            if(js) js.textContent='✅ Connected!';
+            setTimeout(()=>{gameMode='online';hideModeScreen();fullReset();},600);
+          } else {
+            handleOnlineData(data);
+          }
+        });
         conn.on('close',()=>{if(gameMode==='online'){alert('Connection lost.');showModeScreen();}});
-        conn.on('error',err=>{if(js)js.textContent='Failed: '+err;});
+        conn.on('error',err=>{
+          clearTimeout(timeout);
+          console.error('PVP: JOIN FAILED',err);
+          if(retries<MAX_RETRIES){ retries++; setTimeout(doConnect,500); }
+          else if(js) js.textContent='Failed — check the code and retry';
+        });
       }
+
       if(peer.open) doConnect(); else peer.on('open',doConnect);
     };
   }
