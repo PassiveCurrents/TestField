@@ -2895,6 +2895,47 @@ updateUI();
   }
   requestAnimationFrame(envRender);
 })();
+
+// ============================================================
+// --- UI SOUND ENGINE (safe — never touches mkOsc system) ---
+// ============================================================
+const uiSounds = {
+  click:   new Audio('sounds/click_ui.wav'),
+  crypto:  new Audio('sounds/click_crypto.wav'),
+  ambient: new Audio('sounds/ambient.mp3')
+};
+// Pre-configure
+uiSounds.click.volume   = 0.6;
+uiSounds.crypto.volume  = 0.7;
+uiSounds.ambient.loop   = true;
+uiSounds.ambient.volume = 0.2;
+uiSounds.ambient.playbackRate = 0.98;
+
+function playUISound(type) {
+  const s = uiSounds[type];
+  if (!s) return;
+  s.currentTime = 0;
+  s.play().catch(() => {});
+  console.log('SOUND:', type);
+}
+
+// Global click hook — catches ALL interactions including non-button elements.
+// Solana button detected by text content; everything else gets standard click.
+document.addEventListener('click', e => {
+  const txt = (e.target.innerText || e.target.textContent || '').toLowerCase();
+  if (txt.includes('solana')) {
+    playUISound('crypto');
+  } else {
+    playUISound('click');
+  }
+}, { passive: true });
+
+// Ambient: starts on first interaction (browser autoplay policy)
+document.addEventListener('click', function startAmbient() {
+  uiSounds.ambient.play().catch(() => {});
+  document.removeEventListener('click', startAmbient);
+}, { once: true });
+// --- END UI SOUND ENGINE ---
 </script>
 </body>
 </html>
